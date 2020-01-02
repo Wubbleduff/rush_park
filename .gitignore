@@ -1,7 +1,9 @@
 *.exe
 *.obj
+*.swp
 *.vcxproj.user
 *log.txt
 *errors.txt
 Debug
+.vs
 

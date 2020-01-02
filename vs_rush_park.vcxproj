@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{75A5EB39-A4F5-45C1-8D66-01CE35CEDE8D}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>libs\DX\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>libs\DX\Lib\x86;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>dxgi.lib;d3d11.lib;d3dx11.lib;d3dx10.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="source\engine.cpp" />
+    <ClCompile Include="source\game_logic.cpp" />
+    <ClCompile Include="source\platform_win32\compiler_translation_unit.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="source\platform_win32\input.cpp" />
+    <ClCompile Include="source\platform_win32\main.cpp" />
+    <ClCompile Include="source\platform_win32\renderer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="libs\dx\include\D3DX10math.inl" />
+    <None Include="libs\dx\include\d3dx9math.inl" />
+    <None Include="libs\dx\include\D3DX_DXGIFormatConvert.inl" />
+    <None Include="libs\dx\include\xnamathconvert.inl" />
+    <None Include="libs\dx\include\xnamathmatrix.inl" />
+    <None Include="libs\dx\include\xnamathmisc.inl" />
+    <None Include="libs\dx\include\xnamathvector.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libs\dx\include\explicitpath\audiodefs.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\comdecl.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D2D1.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D2D1Helper.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D2DBaseTypes.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D2Derr.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D10.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D10effect.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3d10misc.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3d10sdklayers.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D10shader.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D10_1.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D10_1shader.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D11.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D11SDKLayers.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3D11Shader.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3d9.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3d9caps.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3d9types.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3Dcommon.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3Dcompiler.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DCSX.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX10.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx10async.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX10core.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX10math.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX10mesh.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX10tex.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX11.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX11async.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX11core.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\D3DX11tex.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9anim.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9core.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9effect.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9math.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9mesh.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9shader.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9shape.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9tex.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\d3dx9xof.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\Dcommon.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dinput.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dinputd.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dsconf.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dsetup.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dsound.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\DWrite.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dxdiag.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\DxErr.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dxfile.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\DXGI.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\DXGIFormat.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\DXGIType.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\dxsdkver.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\gameux.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\PIXPlugin.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\rmxfguid.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\rmxftmpl.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\rpcsal.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\X3DAudio.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\xact3.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\xact3d3.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\xact3wb.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\XAPO.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\XAPOBase.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\XAPOFX.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\XAudio2.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\XAudio2fx.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\XDSP.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\XInput.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\xma2defs.h" />
+    <ClInclude Include="libs\dx\include\explicitpath\xnamath.h" />
+    <ClInclude Include="source\engine.h" />
+    <ClInclude Include="source\game_input.h" />
+    <ClInclude Include="source\game_logic.h" />
+    <ClInclude Include="source\graphics.h" />
+    <ClInclude Include="source\my_math.h" />
+    <ClInclude Include="source\platform.h" />
+    <ClInclude Include="source\platform_win32\input.h" />
+    <ClInclude Include="source\platform_win32\renderer.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
