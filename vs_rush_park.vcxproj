@@ -103,6 +103,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\engine.cpp" />
+    <ClCompile Include="source\entity.cpp" />
     <ClCompile Include="source\game_logic.cpp" />
     <ClCompile Include="source\platform_win32\compiler_translation_unit.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -196,6 +197,7 @@
     <ClInclude Include="libs\dx\include\explicitpath\xma2defs.h" />
     <ClInclude Include="libs\dx\include\explicitpath\xnamath.h" />
     <ClInclude Include="source\engine.h" />
+    <ClInclude Include="source\entity.h" />
     <ClInclude Include="source\game_input.h" />
     <ClInclude Include="source\game_logic.h" />
     <ClInclude Include="source\graphics.h" />

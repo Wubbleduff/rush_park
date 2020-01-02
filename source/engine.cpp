@@ -2,6 +2,7 @@
 #include "engine.h"
 
 #include "platform.h"
+#include "entity.h"
 #include "game_logic.h"
 #include "graphics.h"
 
@@ -11,6 +12,7 @@ void start_engine()
 {
   // Initialization
   init_platform();
+  init_entities();
   init_game_logic();
 
 

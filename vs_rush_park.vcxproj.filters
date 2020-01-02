@@ -36,6 +36,9 @@
     <ClCompile Include="source\platform_win32\compiler_translation_unit.cpp">
       <Filter>Source Files\platform_win32</Filter>
     </ClCompile>
+    <ClCompile Include="source\entity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="libs\dx\include\D3DX10math.inl">
@@ -306,6 +309,9 @@
     </ClInclude>
     <ClInclude Include="source\platform_win32\renderer.h">
       <Filter>Source Files\platform_win32</Filter>
+    </ClInclude>
+    <ClInclude Include="source\entity.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
