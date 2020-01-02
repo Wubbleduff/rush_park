@@ -1,0 +1,7 @@
+*.exe
+*.obj
+*.vcxproj.user
+*log.txt
+*errors.txt
+Debug
+
