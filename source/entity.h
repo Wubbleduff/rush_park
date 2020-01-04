@@ -1,29 +1,21 @@
 
 #pragma once
 
-enum ComponentType
-{
-  CMODEL,
-  CANIMATION,
-  CPHYSICS,
-  CPLAYER,
+#include "component_handle.h"
 
-  NUM_COMPONENTS
+struct EntityID
+{
+  unsigned id;
+
+  void attach_component(ComponentHandle component);
+  ComponentHandle get_component(ComponentType type) const;
+
+  EntityID() {}
+  explicit EntityID(unsigned id) : id(id) {}
 };
 
-struct Entity
-{
-  const char *name;
 
-  int components[NUM_COMPONENTS];
-};
-
-typedef int EntityHandle;
+EntityID create_entity(const char *name);
 
 void init_entities();
-
-EntityHandle create_entity(const char *name);
-
-void add_component(EntityHandle entity, ComponentType component, int handle);
-int get_component(EntityHandle entity, ComponentType component);
 

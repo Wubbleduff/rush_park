@@ -1,0 +1,12 @@
+
+Resources:
+https://github.com/dbartolini/data-oriented-design
+
+ECS architecture:
+https://www.youtube.com/watch?v=W3aieHjyNvw&list=WL&index=26&t=411s
+
+Ideas on optimizing systems / job system
+https://www.youtube.com/watch?v=u8B3j8rqYMw&list=WL&index=25&t=0s
+
+
+

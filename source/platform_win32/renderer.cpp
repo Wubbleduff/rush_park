@@ -1,7 +1,7 @@
 
 
-#include "../graphics.h" // Platform independent interface
-#include "renderer.h"    // Platform dependant interface
+#include "../rendering_system.h" // Platform independent interface
+#include "renderer.h"            // Platform dependant interface
 
 #include "../my_math.h" // v2
 
@@ -23,6 +23,10 @@
 #include <vector>
 
 #include <assert.h>
+
+
+
+
 
 
 
@@ -133,14 +137,6 @@ struct Camera
   float width;
 };
 
-struct Model
-{
-  v3 position;
-  v2 scale;
-  float rotation;
-
-  Color color;
-};
 
 struct RendererData
 {
@@ -156,8 +152,6 @@ struct RendererData
   Texture quad_texture;
 
   Camera camera = {};
-
-  std::vector<Model> models_to_render;
 };
 
 
@@ -914,6 +908,10 @@ static void render_mesh(Mesh *mesh, Camera *camera, Shader *shader, v3 position,
 
 void render()
 {
+  unsigned num_model_components;
+  ModelComponent *model_components;
+  get_model_components_array(&num_model_components, &model_components);
+
   D3DResources *resources = &renderer_data->resources;
   Window *window = &renderer_data->window;
 
@@ -924,15 +922,17 @@ void render()
 
 
 
-  for(unsigned i = 0; i < renderer_data->models_to_render.size(); i++)
+  for(unsigned i = 0; i < num_model_components; i++)
   {
-    Model &model = renderer_data->models_to_render[i];
+    ModelComponent &model = model_components[i];
+
+    if(!model.enabled) continue;
 
     Mesh *mesh = &renderer_data->quad_mesh;
     Camera *camera = &renderer_data->camera;
     Shader *shader = &renderer_data->quad_shader;
 
-    v3 position = model.position;
+    v3 position = v3(model.position, model.depth);
     v2 scale = model.scale;
     float rotation = model.rotation;
 
@@ -1036,41 +1036,4 @@ void shutdown_renderer()
   }
 #endif
 }
-
-
-
-
-
-ModelHandle create_model(v3 position, v2 scale, float rotation, Color color)
-{
-  Model model = {};
-
-  model.position = position;
-  model.scale = scale;
-  model.rotation = rotation;
-  model.color = color;
-
-  renderer_data->models_to_render.push_back(model);
-  return renderer_data->models_to_render.size() - 1;
-}
-
-void set_model_position(ModelHandle model, v3 pos)       { renderer_data->models_to_render[model].position = pos;     }
-v3   get_model_position(ModelHandle model)               { return renderer_data->models_to_render[model].position;    }
-void change_model_position(ModelHandle model, v3 offset) { renderer_data->models_to_render[model].position += offset; }
-
-void set_model_scale(ModelHandle model, v2 scale)    { renderer_data->models_to_render[model].scale = scale;  }
-v2   get_model_scale(ModelHandle model)              { return renderer_data->models_to_render[model].scale;   }
-void change_model_scale(ModelHandle model, v2 scale) { renderer_data->models_to_render[model].scale += scale; }
-
-void set_model_rotation(ModelHandle model, float rotation)    { renderer_data->models_to_render[model].rotation = rotation;  }
-float get_model_rotation(ModelHandle model)                   { return renderer_data->models_to_render[model].rotation;      }
-void change_model_rotation(ModelHandle model, float rotation) { renderer_data->models_to_render[model].rotation += rotation; }
-
-void set_model_color(ModelHandle model, Color color)    { renderer_data->models_to_render[model].color = color;  }
-Color get_model_color(ModelHandle model)                { return renderer_data->models_to_render[model].color;   }
-void change_model_color(ModelHandle model, Color color) { renderer_data->models_to_render[model].color += color; }
-
-void set_camera_position(v2 position)  { renderer_data->camera.position = position; }
-v2 get_camera_position()               { return renderer_data->camera.position;     }
-void change_camera_position(v2 offset) { renderer_data->camera.position += offset;  }
 

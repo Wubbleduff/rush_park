@@ -1,9 +1,17 @@
 
 #include "entity.h"
 
+#include "component.h"
+
 #include <stdlib.h>
 #include <assert.h>
 
+struct Entity
+{
+  const char *name;
+
+  ComponentHandle components[NUM_COMPONENTS];
+};
 
 static const int MAX_ENTITIES = 1024;
 struct EntityData
@@ -21,27 +29,30 @@ void init_entities()
   entity_data->entities = (Entity *)malloc(sizeof(Entity) * MAX_ENTITIES);
 }
 
-EntityHandle create_entity(const char *name)
+EntityID create_entity(const char *name)
 {
   if(entity_data->num_entities >= MAX_ENTITIES) assert(0);
 
   Entity entity;
 
   entity.name = name;
-  for(int i = 0; i < NUM_COMPONENTS; i++) entity.components[i] = -1;
+  for(int i = 0; i < NUM_COMPONENTS; i++) entity.components[i] = nullptr;
 
   entity_data->entities[entity_data->num_entities] = entity;
   entity_data->num_entities++;
-  return entity_data->num_entities - 1;
+  return EntityID(entity_data->num_entities - 1);
 }
 
-void add_component(EntityHandle entity, ComponentType component, int handle)
+
+void EntityID::attach_component(ComponentHandle component)
 {
-  entity_data->entities[entity].components[component] = handle;
+  component->enabled = true;
+  component->parent = EntityID(id);
+  entity_data->entities[id].components[component->component_type] = component;
 }
 
-int get_component(EntityHandle entity, ComponentType component)
+ComponentHandle EntityID::get_component(ComponentType component_type) const
 {
-  return entity_data->entities[entity].components[component];
+  return entity_data->entities[id].components[component_type];
 }
 

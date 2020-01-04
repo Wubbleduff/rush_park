@@ -2,18 +2,28 @@
 #include "engine.h"
 
 #include "platform.h"
+
 #include "entity.h"
-#include "game_logic.h"
-#include "graphics.h"
+#include "component.h"
+
+// Game engine systems
+#include "game_logic_system.h"
+#include "rendering_system.h"
+#include "collision_system.h"
 
 static bool engine_running = false;
 
 void start_engine()
 {
   // Initialization
+
   init_platform();
+
   init_entities();
-  init_game_logic();
+  init_component_pool();
+
+  // Init game engine systems
+  init_game_logic_system();
 
 
 
@@ -26,12 +36,11 @@ void start_engine()
     platform_events();
 
 
+    float time_step = 16.666f;
+
     // Process new game state using input
-    update_game_logic();
-
-
-
-    // Process new engine state using game state
+    update_game_logic_system(time_step);
+    update_collision_system(time_step);
 
 
 
