@@ -22,3 +22,8 @@ bool button_toggled_up(int player_id, ButtonInput type);
 
 v2 analog_state(int player_id, AnalogInput type);
 
+
+v2 mouse_world_position();
+
+void read_input();
+

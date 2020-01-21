@@ -2,6 +2,7 @@
 #include "engine.h"
 
 #include "platform.h"
+#include "game_input.h"
 
 #include "entity.h"
 #include "component.h"
@@ -9,7 +10,9 @@
 // Game engine systems
 #include "game_logic_system.h"
 #include "rendering_system.h"
-#include "collision_system.h"
+#include "player_collision_system.h"
+#include "player_controller_system.h"
+#include "ball_collision_system.h"
 
 static bool engine_running = false;
 
@@ -20,7 +23,7 @@ void start_engine()
   init_platform();
 
   init_entities();
-  init_component_pool();
+  init_component_collection();
 
   // Init game engine systems
   init_game_logic_system();
@@ -36,16 +39,35 @@ void start_engine()
     platform_events();
 
 
-    float time_step = 16.666f;
+    float dt = get_dt();
+    if(dt > 0.033f) dt = 0.0033f;
 
-    // Process new game state using input
-    update_game_logic_system(time_step);
-    update_collision_system(time_step);
+    static const float TIME_STEP = 0.016f;
+
+    static float engine_counter = 0.0f;
+    engine_counter += dt;
+
+
+    while(engine_counter >= TIME_STEP)
+    {
+
+
+      // Process new game state using input
+      update_game_logic_system(TIME_STEP);
+      update_player_collision_system(TIME_STEP);
+      update_player_controller_system(TIME_STEP);
+      update_ball_collision_system(TIME_STEP);
 
 
 
-    // Present the game
-    render();
+      // Present the game
+      render();
+
+      read_input();
+
+      engine_counter -= TIME_STEP;
+    }
+
   }
 
   // Unintialization

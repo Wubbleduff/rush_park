@@ -16,12 +16,12 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{383102e3-c678-408d-9690-2128339931f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\engine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\game_logic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\platform_win32\input.cpp">
@@ -39,10 +39,19 @@
     <ClCompile Include="source\entity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\physics.cpp">
+    <ClCompile Include="source\component.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\component.cpp">
+    <ClCompile Include="source\game_logic_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\player_collision_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\player_controller_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\ball_collision_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -67,6 +76,18 @@
     </None>
     <None Include="libs\dx\include\xnamathvector.inl">
       <Filter>Library Headers</Filter>
+    </None>
+    <None Include="shaders\flat_color.ps">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\flat_color.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\quad.ps">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\quad.vs">
+      <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -292,12 +313,6 @@
     <ClInclude Include="libs\dx\include\explicitpath\xnamath.h">
       <Filter>Library Headers</Filter>
     </ClInclude>
-    <ClInclude Include="source\graphics.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="source\game_logic.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\game_input.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -319,10 +334,22 @@
     <ClInclude Include="source\entity.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\physics.h">
+    <ClInclude Include="source\component.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\component.h">
+    <ClInclude Include="source\game_logic_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\player_collision_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\player_controller_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\ball_collision_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\rendering_system.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

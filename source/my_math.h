@@ -10,7 +10,7 @@ static const float PI = 3.14159265f;
 
 static float squared(float a) { return a * a; }
 
-#if 0
+#if 1
 static int min(int a, int b) { return (a < b) ? a : b; }
 static int min(int a, int b, int c) { return min(a, min(b, c)); }
 static float min(float a, float b) { return (a < b) ? a : b; }
@@ -136,26 +136,30 @@ static v2 &operator-=(v2 &a, v2 b) { a.x -= b.x; a.y -= b.y; return a; }
 static v3 &operator-=(v3 &a, v3 b) { a.x -= b.x; a.y -= b.y; a.z -= b.z; return a; }
 static v4 &operator-=(v4 &a, v4 b) { a.x -= b.x; a.y -= b.y; a.z -= b.z; a.w -= b.w; return a; }
 
-static v2 &operator*=(v2 &a, float b) { a.x -= b; a.y -= b; return a; }
-static v3 &operator*=(v3 &a, float b) { a.x -= b; a.y -= b; a.z -= b; return a; }
-static v4 &operator*=(v4 &a, float b) { a.x -= b; a.y -= b; a.z -= b; a.w -= b; return a; }
+static v2 &operator*=(v2 &a, float b) { a.x *= b; a.y *= b; return a; }
+static v3 &operator*=(v3 &a, float b) { a.x *= b; a.y *= b; a.z *= b; return a; }
+static v4 &operator*=(v4 &a, float b) { a.x *= b; a.y *= b; a.z *= b; a.w *= b; return a; }
 
 static v2 &operator/=(v2 &a, float b) { a.x /= b; a.y /= b; return a; }
 static v3 &operator/=(v3 &a, float b) { a.x /= b; a.y /= b; a.z /= b; return a; }
 static v4 &operator/=(v4 &a, float b) { a.x /= b; a.y /= b; a.z /= b; a.w /= b; return a; }
 
+static v2 reflect(v2 v, v2 n) { return v - 2.0f * dot(v, n) * n; }
+static v3 reflect(v3 v, v3 n) { return v - 2.0f * dot(v, n) * n; }
+static v4 reflect(v4 v, v4 n) { return v - 2.0f * dot(v, n) * n; }
+
 // Gets the length of the vector
 static float length(v2 v)
 {
-  return (float)sqrt(squared(v.x) + squared(v.y));
+  return sqrtf(squared(v.x) + squared(v.y));
 }
 static float length(v3 v)
 {
-  return (float)sqrt(squared(v.x) + squared(v.y) + squared(v.z));
+  return sqrtf(squared(v.x) + squared(v.y) + squared(v.z));
 }
 static float length(v4 v)
 {
-  return (float)sqrt(squared(v.x) + squared(v.y) + squared(v.z) + squared(v.w));
+  return sqrtf(squared(v.x) + squared(v.y) + squared(v.z) + squared(v.w));
 }
 
 // Gets the squared length of this vector
@@ -222,13 +226,13 @@ static v4 clamp_length(v4 v, float max_length)
 }
 
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // v2 specific operations
 ///////////////////////////////////////////////////////////////////////////////
 
-// Returns a vector that is perpendicular to this vector. This specific
-// normal will be rotated 90 degrees clockwise.
-static v2 find_normal(v2 a)
+// Returns a counter-clockwise normal to the given vector with the same length
+static v2 find_ccw_normal(v2 a)
 {
   return v2(a.y, -a.x);
 }

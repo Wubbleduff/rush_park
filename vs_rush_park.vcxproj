@@ -102,17 +102,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="source\ball_collision_system.cpp" />
     <ClCompile Include="source\component.cpp" />
     <ClCompile Include="source\engine.cpp" />
     <ClCompile Include="source\entity.cpp" />
-    <ClCompile Include="source\game_logic.cpp" />
-    <ClCompile Include="source\physics.cpp" />
+    <ClCompile Include="source\game_logic_system.cpp" />
     <ClCompile Include="source\platform_win32\compiler_translation_unit.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="source\platform_win32\input.cpp" />
     <ClCompile Include="source\platform_win32\main.cpp" />
     <ClCompile Include="source\platform_win32\renderer.cpp" />
+    <ClCompile Include="source\player_collision_system.cpp" />
+    <ClCompile Include="source\player_controller_system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libs\dx\include\D3DX10math.inl" />
@@ -122,6 +124,10 @@
     <None Include="libs\dx\include\xnamathmatrix.inl" />
     <None Include="libs\dx\include\xnamathmisc.inl" />
     <None Include="libs\dx\include\xnamathvector.inl" />
+    <None Include="shaders\flat_color.ps" />
+    <None Include="shaders\flat_color.vs" />
+    <None Include="shaders\quad.ps" />
+    <None Include="shaders\quad.vs" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libs\dx\include\explicitpath\audiodefs.h" />
@@ -198,17 +204,19 @@
     <ClInclude Include="libs\dx\include\explicitpath\XInput.h" />
     <ClInclude Include="libs\dx\include\explicitpath\xma2defs.h" />
     <ClInclude Include="libs\dx\include\explicitpath\xnamath.h" />
+    <ClInclude Include="source\ball_collision_system.h" />
     <ClInclude Include="source\component.h" />
     <ClInclude Include="source\engine.h" />
     <ClInclude Include="source\entity.h" />
     <ClInclude Include="source\game_input.h" />
-    <ClInclude Include="source\game_logic.h" />
-    <ClInclude Include="source\graphics.h" />
+    <ClInclude Include="source\game_logic_system.h" />
     <ClInclude Include="source\my_math.h" />
-    <ClInclude Include="source\physics.h" />
     <ClInclude Include="source\platform.h" />
     <ClInclude Include="source\platform_win32\input.h" />
     <ClInclude Include="source\platform_win32\renderer.h" />
+    <ClInclude Include="source\player_collision_system.h" />
+    <ClInclude Include="source\player_controller_system.h" />
+    <ClInclude Include="source\rendering_system.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

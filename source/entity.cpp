@@ -10,7 +10,7 @@ struct Entity
 {
   const char *name;
 
-  ComponentHandle components[NUM_COMPONENTS];
+  Component *components[NUM_COMPONENTS];
 };
 
 static const int MAX_ENTITIES = 1024;
@@ -22,12 +22,26 @@ struct EntityData
 
 static EntityData *entity_data;
 
-void init_entities()
+Component *EntityID::add_component(ComponentType type)
 {
-  entity_data = (EntityData *)malloc(sizeof(EntityData));
-  entity_data->num_entities = 0;
-  entity_data->entities = (Entity *)malloc(sizeof(Entity) * MAX_ENTITIES);
+  Component *component = create_component(EntityID(id), type);
+  entity_data->entities[id].components[type] = component;
+  return component;
 }
+
+void EntityID::remove_component(ComponentType type)
+{
+  Component *component_to_remove = entity_data->entities[id].components[type];
+  destroy_component(component_to_remove);
+  entity_data->entities[id].components[type] = nullptr;
+}
+
+Component *EntityID::get_component(ComponentType component_type) const
+{
+  return entity_data->entities[id].components[component_type];
+}
+
+bool EntityID::operator==(const EntityID &other) const { return id == other.id; }
 
 EntityID create_entity(const char *name)
 {
@@ -43,16 +57,18 @@ EntityID create_entity(const char *name)
   return EntityID(entity_data->num_entities - 1);
 }
 
-
-void EntityID::attach_component(ComponentHandle component)
+#if 0
+void destroy_entity(EntityID entity)
 {
-  component->enabled = true;
-  component->parent = EntityID(id);
-  entity_data->entities[id].components[component->component_type] = component;
+  Entity
 }
+#endif
 
-ComponentHandle EntityID::get_component(ComponentType component_type) const
+
+void init_entities()
 {
-  return entity_data->entities[id].components[component_type];
+  entity_data = (EntityData *)malloc(sizeof(EntityData));
+  entity_data->num_entities = 0;
+  entity_data->entities = (Entity *)malloc(sizeof(Entity) * MAX_ENTITIES);
 }
 

@@ -9,13 +9,20 @@
 
 
 #include <windows.h>
+#include <assert.h>
+#include <stdio.h>
 
 
 struct PlatformData
 {
+  HINSTANCE app_instance;
+  HWND window_handle;
+
   bool key_states[256];      // TODO: This is temporary and should be moved to the input module
   bool prev_key_states[256]; // TODO: This is temporary and should be moved to the input module
-  HINSTANCE app_instance;
+
+  LARGE_INTEGER previous_time;
+
 };
 
 static PlatformData platform_data = {};
@@ -23,13 +30,20 @@ static PlatformData platform_data = {};
 
 void read_input()
 {
-  //memcpy(platform_data.prev_key_states, platform_data.key_states, sizeof(platform_data.key_states));
+  memcpy(platform_data.prev_key_states, platform_data.key_states, sizeof(platform_data.key_states));
 }
 
 
 bool button_toggled_down(int player_id, ButtonInput type)
 {
-  return false;
+  int index = 0;
+
+  switch(type)
+  {
+    case INPUT_SWING: { index = ' '; break; }
+  }
+
+  return (platform_data.prev_key_states[index] == false && platform_data.key_states[index] == true) ? true : false;
 }
 
 bool button_state(int player_id, ButtonInput type)
@@ -67,6 +81,19 @@ v2 analog_state(int player_id, AnalogInput type)
   }
 
   return dir;
+}
+
+
+
+v2 mouse_world_position()
+{
+  POINT window_client_pos;
+  BOOL success = GetCursorPos(&window_client_pos);
+  assert(success);
+  success = ScreenToClient(platform_data.window_handle, &window_client_pos);
+  assert(success);
+
+  return client_to_world(v2(window_client_pos.x, window_client_pos.y));
 }
 
 
@@ -157,11 +184,10 @@ void init_platform()
 #define TRANSPARENT_WINDOWx
 
   // Create the window
-  HWND window_handle;
 #ifdef TRANSPARENT_WINDOW
   unsigned monitor_width = GetSystemMetrics(SM_CXSCREEN);
   unsigned monitor_height = GetSystemMetrics(SM_CYSCREEN);
-  window_handle = CreateWindowEx(0,    // Extended style
+  platform_data.window_handle = CreateWindowEx(0,    // Extended style
                                 window_class.lpszClassName,        // Class name
                                 "First",                           // Window name
                                 WS_POPUP | WS_VISIBLE,             // Style of the window
@@ -178,7 +204,7 @@ void init_platform()
   float ratio = 16.0f / 9.0f;
   unsigned monitor_width = width;
   unsigned monitor_height = (unsigned)((1.0f / ratio) * width);
-  window_handle = CreateWindowEx(0,                                // Extended style
+  platform_data.window_handle = CreateWindowEx(0,                  // Extended style
                                 window_class.lpszClassName,        // Class name
                                 "First",                           // Window name
                                 WS_OVERLAPPEDWINDOW | WS_VISIBLE,  // Style of the window
@@ -191,11 +217,13 @@ void init_platform()
                                 platform_data.app_instance,        // Handle to an instance
                                 0);                                // Pointer to a CLIENTCTREATESTRUCT
 #endif
-  if(!window_handle) { return; }
+  if(!platform_data.window_handle) { return; }
 
+  RECT client_rect;
+  BOOL success = GetClientRect(platform_data.window_handle, &client_rect);
+  init_renderer(platform_data.window_handle, client_rect.right, client_rect.bottom, false, false);
 
-
-  init_renderer(window_handle, monitor_width, monitor_height, false, false);
+  QueryPerformanceCounter(&platform_data.previous_time);
 }
 
 void platform_events()
@@ -214,13 +242,31 @@ void platform_events()
 
   if(platform_data.key_states[VK_ESCAPE]) stop_engine();
 
-  read_input(); // TODO: Move this with other input
+
+  QueryPerformanceCounter(&platform_data.previous_time);
+}
+
+float get_dt()
+{
+  LARGE_INTEGER counts_per_second;
+  QueryPerformanceFrequency(&counts_per_second);
+
+  LARGE_INTEGER current_time;
+  QueryPerformanceCounter(&current_time);
+
+  LONGLONG counts_passed = current_time.QuadPart - platform_data.previous_time.QuadPart;
+
+  double counts_per_ms = (double)counts_per_second.QuadPart / 1000.0;
+  double dt = (double)counts_passed / counts_per_ms;
+
+  return (float)dt;
 }
 
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
   platform_data.app_instance = hInstance;
+
   start_engine();
 
   return 0;

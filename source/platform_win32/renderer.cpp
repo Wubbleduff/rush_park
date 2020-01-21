@@ -150,6 +150,7 @@ struct RendererData
 
   Mesh quad_mesh;
   Texture quad_texture;
+  Texture circle_texture;
 
   Camera camera = {};
 };
@@ -778,6 +779,7 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
 
 
   // Render to texture setup
+#if 0
   {
     // Setup the render target texture description.
     D3D11_TEXTURE2D_DESC texture_desc = {};
@@ -792,24 +794,24 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
     texture_desc.CPUAccessFlags = 0;
     texture_desc.MiscFlags = 0;
 
-    D3D11_SAMPLER_DESC samplerDesc;
+    D3D11_SAMPLER_DESC sampler_desc;
     // Create a texture sampler state description.
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    //samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-    samplerDesc.MipLODBias = 0.0f;
-    samplerDesc.MaxAnisotropy = 1;
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-    samplerDesc.BorderColor[0] = 0;
-    samplerDesc.BorderColor[1] = 0;
-    samplerDesc.BorderColor[2] = 0;
-    samplerDesc.BorderColor[3] = 0;
-    samplerDesc.MinLOD = 0;
-    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    //sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.MipLODBias = 0.0f;
+    sampler_desc.MaxAnisotropy = 1;
+    sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+    sampler_desc.BorderColor[0] = 0;
+    sampler_desc.BorderColor[1] = 0;
+    sampler_desc.BorderColor[2] = 0;
+    sampler_desc.BorderColor[3] = 0;
+    sampler_desc.MinLOD = 0;
+    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
     // Create the texture sampler state.
-    HRESULT result = renderer_data->resources.device->CreateSamplerState(&samplerDesc, &renderer_data->quad_texture.sample_state);
+    HRESULT result = renderer_data->resources.device->CreateSamplerState(&sampler_desc, &renderer_data->render_texture.sample_state);
     assert(!FAILED(result));
 
     // Create the render target texture.
@@ -827,19 +829,173 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
     assert(!FAILED(result));
 
     // Setup the description of the shader resource view.
-    D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_viewDesc = {};
-    shader_resource_viewDesc.Format = texture_desc.Format;
-    shader_resource_viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    shader_resource_viewDesc.Texture2D.MostDetailedMip = 0;
-    shader_resource_viewDesc.Texture2D.MipLevels = 1;
+    D3D11_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
+    shader_resource_view_desc.Format = texture_desc.Format;
+    shader_resource_view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    shader_resource_view_desc.Texture2D.MostDetailedMip = 0;
+    shader_resource_view_desc.Texture2D.MipLevels = 1;
 
     // Create the shader resource view.
-    result = device->CreateShaderResourceView(render_target_texture, &shader_resource_viewDesc, &render_target_shader_resource_view);
+    result = device->CreateShaderResourceView(render_target_texture, &shader_resource_view_desc, &render_target_shader_resource_view);
     assert(!FAILED(result));
 
 
-    renderer_data->quad_texture.resource = render_target_shader_resource_view;
+    renderer_data->render_texture.resource = render_target_shader_resource_view;
   }
+#endif
+
+
+  // Quad texture setup
+  {
+    ID3D11Texture2D *quad_target_texture = nullptr;
+
+
+
+    D3D11_SAMPLER_DESC sampler_desc;
+    //sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.MipLODBias = 0.0f;
+    sampler_desc.MaxAnisotropy = 1;
+    sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+    sampler_desc.BorderColor[0] = 0;
+    sampler_desc.BorderColor[1] = 0;
+    sampler_desc.BorderColor[2] = 0;
+    sampler_desc.BorderColor[3] = 0;
+    sampler_desc.MinLOD = 0;
+    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+    // Create the texture sampler state.
+    HRESULT result = renderer_data->resources.device->CreateSamplerState(&sampler_desc, &renderer_data->quad_texture.sample_state);
+    assert(!FAILED(result));
+
+
+
+    D3D11_TEXTURE2D_DESC texture_desc = {};
+    texture_desc.Width = 1;
+    texture_desc.Height = 1;
+    texture_desc.MipLevels = 1;
+    texture_desc.ArraySize = 1;
+    texture_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    texture_desc.SampleDesc.Count = 1;
+    texture_desc.Usage = D3D11_USAGE_DEFAULT;
+    texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    texture_desc.CPUAccessFlags = 0;
+    texture_desc.MiscFlags = 0;
+
+    // Create the texture.
+    unsigned texture[] = { 0xFFFFFFFF };
+    D3D11_SUBRESOURCE_DATA data = {texture, texture_desc.Width * sizeof(texture[0]), 0};
+    result = device->CreateTexture2D(&texture_desc, &data, &quad_target_texture);
+    assert(!FAILED(result));
+
+    // Setup the description of the render target view.
+    D3D11_SHADER_RESOURCE_VIEW_DESC  view_desc = {};
+    view_desc.Format = texture_desc.Format;
+    view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    view_desc.Texture2D.MostDetailedMip = 0;
+    view_desc.Texture2D.MipLevels = 1;
+
+    // Create the render target view.
+    ID3D11ShaderResourceView *quad_target_view = nullptr;
+    result = device->CreateShaderResourceView(quad_target_texture, &view_desc, &quad_target_view);
+    assert(!FAILED(result));
+
+    renderer_data->quad_texture.resource = quad_target_view;
+  }
+
+
+  // Circle texture setup
+  {
+    ID3D11Texture2D *circle_target_texture = nullptr;
+
+
+
+    D3D11_SAMPLER_DESC sampler_desc;
+    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    //sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.MipLODBias = 0.0f;
+    sampler_desc.MaxAnisotropy = 1;
+    sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+    sampler_desc.BorderColor[0] = 0;
+    sampler_desc.BorderColor[1] = 0;
+    sampler_desc.BorderColor[2] = 0;
+    sampler_desc.BorderColor[3] = 0;
+    sampler_desc.MinLOD = 0;
+    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+    // Create the texture sampler state.
+    HRESULT result = renderer_data->resources.device->CreateSamplerState(&sampler_desc, &renderer_data->circle_texture.sample_state);
+    assert(!FAILED(result));
+
+
+
+    static const unsigned RADIUS_PIXELS = 32;
+    D3D11_TEXTURE2D_DESC texture_desc = {};
+    texture_desc.Width = RADIUS_PIXELS * 2;
+    texture_desc.Height = RADIUS_PIXELS * 2;
+    texture_desc.MipLevels = 1;
+    texture_desc.ArraySize = 1;
+    texture_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    texture_desc.SampleDesc.Count = 1;
+    texture_desc.Usage = D3D11_USAGE_DEFAULT;
+    texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    texture_desc.CPUAccessFlags = 0;
+    texture_desc.MiscFlags = 0;
+
+    // Create the texture.
+    unsigned texture[RADIUS_PIXELS * 2][RADIUS_PIXELS * 2];
+    for(int y = 0; y < RADIUS_PIXELS * 2; y++)
+    {
+      for(int x = 0; x < RADIUS_PIXELS * 2; x++)
+      {
+        v2 center = v2(RADIUS_PIXELS, RADIUS_PIXELS);
+        v2 curr = v2(x, y);
+
+        if(length_squared(center - curr) < RADIUS_PIXELS * RADIUS_PIXELS) texture[y][x] = 0xFFFFFFFF;
+        else texture[y][x] = 0;
+      }
+    }
+    D3D11_SUBRESOURCE_DATA data = {texture, texture_desc.Width * sizeof(texture[0][0]), 0};
+    result = device->CreateTexture2D(&texture_desc, &data, &circle_target_texture);
+    assert(!FAILED(result));
+
+
+    // Setup the description of the render target view.
+    D3D11_SHADER_RESOURCE_VIEW_DESC  view_desc = {};
+    view_desc.Format = texture_desc.Format;
+    view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    view_desc.Texture2D.MostDetailedMip = 0;
+    view_desc.Texture2D.MipLevels = 1;
+
+    // Create the render target view.
+    ID3D11ShaderResourceView *circle_target_view = nullptr;
+    result = device->CreateShaderResourceView(circle_target_texture, &view_desc, &circle_target_view);
+    assert(!FAILED(result));
+
+
+
+
+
+    renderer_data->circle_texture.resource = circle_target_view;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   renderer_data->camera.width = 20.0f;
@@ -908,9 +1064,7 @@ static void render_mesh(Mesh *mesh, Camera *camera, Shader *shader, v3 position,
 
 void render()
 {
-  unsigned num_model_components;
-  ModelComponent *model_components;
-  get_model_components_array(&num_model_components, &model_components);
+  ComponentIterator<ModelComponent> it = get_models_iterator();
 
   D3DResources *resources = &renderer_data->resources;
   Window *window = &renderer_data->window;
@@ -922,11 +1076,10 @@ void render()
 
 
 
-  for(unsigned i = 0; i < num_model_components; i++)
-  {
-    ModelComponent &model = model_components[i];
 
-    if(!model.enabled) continue;
+  while(it != nullptr)
+  {
+    ModelComponent &model = *it;
 
     Mesh *mesh = &renderer_data->quad_mesh;
     Camera *camera = &renderer_data->camera;
@@ -938,9 +1091,13 @@ void render()
 
     v4 color = v4(model.color.r, model.color.g, model.color.b, model.color.a);
 
-    Texture *texture = 0;
+    Texture *texture = nullptr;
+    if(model.texture && strcmp(model.texture, "ball") == 0) texture = &(renderer_data->circle_texture);
+    else texture = &(renderer_data->quad_texture);
 
     render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    ++it;
   }
 
 
@@ -1036,4 +1193,25 @@ void shutdown_renderer()
   }
 #endif
 }
+
+v2 client_to_world(v2 window_client_pos)
+{
+  window_client_pos.y = renderer_data->window.framebuffer_height - window_client_pos.y;
+  v2 ndc_pos =
+  {
+    (window_client_pos.x / renderer_data->window.framebuffer_width)  * 2.0f - 1.0f,
+    (window_client_pos.y / renderer_data->window.framebuffer_height) * 2.0f - 1.0f
+  };
+
+
+  Camera *camera = &(renderer_data->camera);
+  v2 world_pos =
+  {
+    ndc_pos.x * (camera->width / 2.0f),
+    ndc_pos.y * (camera->width / renderer_data->window.aspect_ratio) / 2.0f
+  };
+
+  return world_pos;
+}
+
 
