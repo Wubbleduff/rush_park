@@ -133,6 +133,7 @@ static bool line_circle_collision(Line line, Circle circle, float *dist_t, v2 *n
 // normal returns the normal to b
 static bool line_line_collision(Line a, Line b, float *dist_t, v2 *normal)
 {
+  return false;
 }
 
 static void check_swept_ball(ColliderComponent *ball_collider, v2 ball_position, v2 ball_velocity, float ball_radius, BallCollisionInfo *collisions, int *num_collisions)
@@ -311,7 +312,7 @@ void update_ball_collision_system(float time_step)
 
 void update_ball_collision_system(float time_step)
 {
-
+  return;
 
   // For each ball
   //   while will not collide

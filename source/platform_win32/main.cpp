@@ -185,9 +185,11 @@ void init_platform()
 
   // Create the window
 #ifdef TRANSPARENT_WINDOW
-  unsigned monitor_width = GetSystemMetrics(SM_CXSCREEN);
-  unsigned monitor_height = GetSystemMetrics(SM_CYSCREEN);
-  platform_data.window_handle = CreateWindowEx(0,    // Extended style
+  //unsigned monitor_width = GetSystemMetrics(SM_CXSCREEN);
+  //unsigned monitor_height = GetSystemMetrics(SM_CYSCREEN);
+  unsigned monitor_width = 1024;
+  unsigned monitor_height = 768;
+  platform_data.window_handle = CreateWindowEx(WS_EX_COMPOSITED,   // Extended style
                                 window_class.lpszClassName,        // Class name
                                 "First",                           // Window name
                                 WS_POPUP | WS_VISIBLE,             // Style of the window
@@ -199,6 +201,9 @@ void init_platform()
                                 0,                                 // Handle to a menu
                                 platform_data.app_instance,        // Handle to an instance
                                 0);                                // Pointer to a CLIENTCTREATESTRUCT
+
+  BOOL result = SetWindowLong(platform_data.window_handle, GWL_EXSTYLE, WS_EX_LAYERED) ;
+  result = SetLayeredWindowAttributes(platform_data.window_handle, RGB(0, 0, 0), 10, LWA_COLORKEY);
 #else
   unsigned width = 1920;
   float ratio = 16.0f / 9.0f;
