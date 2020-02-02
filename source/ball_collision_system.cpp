@@ -5,6 +5,7 @@
 #include <assert.h>
 
 
+#if 0
 const static int MAX_BALL_COLLISIONS = 128;
 
 struct Line
@@ -383,5 +384,12 @@ void update_ball_collision_system(float time_step)
 
 
 
+
+
+#endif
+
+void update_ball_collision_system(float time_step)
+{
+}
 
 

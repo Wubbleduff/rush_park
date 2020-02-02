@@ -13,13 +13,11 @@ struct Component
   bool enabled;
   EntityID parent;
 
-
-
   virtual void destroy() {};
 };
 
 
-struct ModelComponent : Component
+struct Model : Component
 {
   v2 position = v2();
   float depth = 0.0f;
@@ -30,40 +28,16 @@ struct ModelComponent : Component
 
   const char *texture = nullptr;
 
-
-
   //void destroy();
 };
 
-
-
-struct ColliderComponent : public Component
+struct Wall : public Component
 {
-  enum Type
-  {
-    CIRCLE,
-    RECT,
-  } type = RECT;
-
-  struct Circle { float radius; };
-  struct Rect   { v2 scale; };
-  union
-  {
-    Circle circle;
-    Rect rect;
-  };
-
-  bool is_static;
-  float mass;
-
-
-
-  //void destroy();
-
-  ColliderComponent() {  }
+  v2 scale;
+  // void destroy();
 };
 
-struct BallComponent : public Component
+struct Ball : public Component
 {
   float drag = 0.001f;
   v2 velocity = v2();
@@ -75,7 +49,7 @@ struct BallComponent : public Component
 };
 
 
-struct PlayerComponent : public Component
+struct Player : public Component
 {
   int num;
 
@@ -93,14 +67,19 @@ struct PlayerComponent : public Component
     SWINGING,
   } state = DEFAULT;
 
-  float move_power = 1.0f; // aka acceleration, time to speed up, etc
-  float hit_power = 100.0f;
-
+  // Physics
+  float move_power = 150.0f; // aka acceleration, time to speed up, etc
   v2 velocity = v2();
-  float drag = 0.5f;
+  float drag = 20.0f;
+  float mass = 1.0f;
 
-  float swing_time = 0.0f;
+  // Smack
+  float radius = 1.0f;
+  float arc_length = 0.25f;
+  float hit_power = 100.0f;
+  float swing_time = 0.2f;
   float swing_timer = 0.0f;
+
 
   int num_balls_hit_last_frame = 0;
   static const int MAX_NUM_BALLS_HIT = 4;
@@ -154,10 +133,10 @@ PlayerComponent *create_player_component(EntityID parent, int num, PlayerCompone
 Component *create_component(EntityID parent, ComponentType type);
 void destroy_component(Component *component);
 
-ComponentIterator<ModelComponent> get_models_iterator();
-ComponentIterator<ColliderComponent> get_colliders_iterator();
-ComponentIterator<BallComponent> get_balls_iterator();
-ComponentIterator<PlayerComponent> get_players_iterator();
+ComponentIterator<Model> get_models_iterator();
+ComponentIterator<Wall> get_walls_iterator();
+ComponentIterator<Ball> get_balls_iterator();
+ComponentIterator<Player> get_players_iterator();
 
 
 void init_component_collection();

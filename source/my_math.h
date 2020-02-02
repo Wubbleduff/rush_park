@@ -445,3 +445,19 @@ struct Color
 
 static Color &operator+=(Color &a, const Color &b) { a.r += b.r; a.g += b.g; a.b += b.b; a.a += b.a; return a; }
 
+
+///////////////////////////////////////////////////////////////////////////////
+// rect
+///////////////////////////////////////////////////////////////////////////////
+
+struct Rect
+{
+  v2 position; // Middle of the rect
+  v2 scale;    // Complete width and height
+
+  Rect() {}
+  Rect(v2 pos, v2 scale) : position(pos), scale(scale) {}
+};
+
+
+

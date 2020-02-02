@@ -36,10 +36,36 @@ void EntityID::remove_component(ComponentType type)
   entity_data->entities[id].components[type] = nullptr;
 }
 
+
+
+
 Component *EntityID::get_component(ComponentType component_type) const
 {
   return entity_data->entities[id].components[component_type];
 }
+
+Model *EntityID::get_model() const
+{
+  return (Model *)entity_data->entities[id].components[C_MODEL];
+}
+
+Ball *EntityID::get_ball() const
+{
+  return (Ball *)entity_data->entities[id].components[C_BALL];
+}
+
+Wall *EntityID::get_wall() const
+{
+  return (Wall *)entity_data->entities[id].components[C_WALL];
+}
+
+Player *EntityID::get_player() const
+{
+  return (Player *)entity_data->entities[id].components[C_PLAYER];
+}
+
+
+
 
 bool EntityID::operator==(const EntityID &other) const { return id == other.id; }
 

@@ -9,11 +9,12 @@
 
 
 // Check if the player has hit any balls
-static void check_ball_hits(PlayerComponent *player)
+#if 0
+static void check_ball_hits(Player *player)
 {
   ComponentIterator<BallComponent> ball_it = get_balls_iterator();
 
-  ModelComponent *player_model = (ModelComponent *)player->parent.get_component(C_MODEL);
+  Model *player_model = (Model *)player->parent.get_component(C_MODEL);
 
   // Loop through all balls
   int num_balls_hit = 0;;
@@ -22,7 +23,7 @@ static void check_ball_hits(PlayerComponent *player)
   while(ball_it != nullptr)
   {
     BallComponent *ball = &(*ball_it);
-    ModelComponent *ball_model = (ModelComponent *)ball->parent.get_component(C_MODEL);
+    Model *ball_model = (Model *)ball->parent.get_component(C_MODEL);
     ColliderComponent *ball_collider = (ColliderComponent *)ball->parent.get_component(C_COLLIDER);
 
     // Check if the ball is in range of a hit
@@ -79,16 +80,17 @@ static void check_ball_hits(PlayerComponent *player)
     player->balls_hit_last_frame[i] = balls_hit[i];
   }
 }
+#endif
 
 void update_player_controller_system(float time_step)
 {
-  ComponentIterator<PlayerComponent> player_it = get_players_iterator();
+  ComponentIterator<Player> player_it = get_players_iterator();
 
   int i = 0;
   while(player_it != nullptr)
   {
-    PlayerComponent *player = &(*player_it);
-    ModelComponent *player_model = (ModelComponent *)player->parent.get_component(C_MODEL);
+    Player *player = &(*player_it);
+    Model *player_model = (Model *)player->parent.get_component(C_MODEL);
 
     if(!player->enabled)       { ++player_it; continue; } 
     if(!player_model->enabled) { ++player_it; continue; } 
@@ -99,31 +101,33 @@ void update_player_controller_system(float time_step)
     if(!(move_dir.x == 0.0f && move_dir.y == 0.0f)) move_dir = unit(move_dir);
 
 
-    float dampener = 0.1f; // This is here so that players will set roughly 1 for "movement power" 
-    player->velocity += move_dir * player->move_power * time_step * dampener;
+    player->velocity += move_dir * player->move_power * time_step;
     player->velocity -= player->velocity * player->drag * time_step;
 
     if(button_toggled_down(i, INPUT_SWING))
     {
-      player->state = PlayerComponent::SWINGING;
+      player->state = Player::SWINGING;
       player->swing_timer = player->swing_time;
     }
 
 
-    if(player->state == PlayerComponent::SWINGING)
+    if(player->state == Player::SWINGING)
     {
       player->swing_timer -= time_step;
       if(player->swing_timer <= 0.0f)
       {
         player->swing_timer = 0.0f;
-        player->state = PlayerComponent::DEFAULT;
+        player->state = Player::DEFAULT;
       }
 
+      player_model->color = Color(1.0f, 0.0f, 0.0f);
 
-      check_ball_hits(player);
+
+      //check_ball_hits(player);
     }
     else
     {
+      player_model->color = Color(0.0f, 0.0f, 1.0f);
       player->num_balls_hit_last_frame = 0;
     }
 

@@ -89,51 +89,51 @@ static ComponentCollection *component_collection;
 
 
 
-static ModelComponent *create_model_component(EntityID parent)
+static Model *create_model_component(EntityID parent)
 {
-  ModelComponent model = {};
+  Model model = {};
 
   model.component_type = C_MODEL;
   model.enabled = true;
   model.parent = parent;
 
-  ComponentPool<ModelComponent> *pool = (ComponentPool<ModelComponent> *)component_collection->pools[C_MODEL];
+  ComponentPool<Model> *pool = (ComponentPool<Model> *)component_collection->pools[C_MODEL];
   return pool->add(&model);
 }
 
-static ColliderComponent *create_collider_component(EntityID parent)
+static Wall *create_wall_component(EntityID parent)
 {
-  ColliderComponent collider = {};
+  Wall wall = {};
 
-  collider.component_type = C_MODEL;
-  collider.enabled = true;
-  collider.parent = parent;
+  wall.component_type = C_WALL;
+  wall.enabled = true;
+  wall.parent = parent;
 
-  ComponentPool<ColliderComponent> *pool = (ComponentPool<ColliderComponent> *)component_collection->pools[C_COLLIDER];
-  return pool->add(&collider);
+  ComponentPool<Wall> *pool = (ComponentPool<Wall> *)component_collection->pools[C_WALL];
+  return pool->add(&wall);
 }
 
-static BallComponent *create_ball_component(EntityID parent)
+static Ball *create_ball_component(EntityID parent)
 {
-  BallComponent ball = {};
+  Ball ball = {};
 
   ball.component_type = C_MODEL;
   ball.enabled = true;
   ball.parent = parent;
 
-  ComponentPool<BallComponent> *pool = (ComponentPool<BallComponent> *)component_collection->pools[C_BALL];
+  ComponentPool<Ball> *pool = (ComponentPool<Ball> *)component_collection->pools[C_BALL];
   return pool->add(&ball);
 }
 
-static PlayerComponent *create_player_component(EntityID parent)
+static Player *create_player_component(EntityID parent)
 {
-  PlayerComponent player = {};
+  Player player = {};
 
   player.component_type = C_MODEL;
   player.enabled = true;
   player.parent = parent;
 
-  ComponentPool<PlayerComponent> *pool = (ComponentPool<PlayerComponent> *)component_collection->pools[C_PLAYER];
+  ComponentPool<Player> *pool = (ComponentPool<Player> *)component_collection->pools[C_PLAYER];
   return pool->add(&player);
 }
 
@@ -142,7 +142,7 @@ Component *create_component(EntityID parent, ComponentType type)
   switch(type)
   {
     case C_MODEL:    return create_model_component(parent);
-    case C_COLLIDER: return create_collider_component(parent);
+    case C_WALL:     return create_wall_component(parent);
     case C_BALL:     return create_ball_component(parent);
     case C_PLAYER:   return create_player_component(parent);
 
@@ -154,29 +154,29 @@ void destroy_component(Component *component)
 {
 }
 
-ComponentIterator<ModelComponent> get_models_iterator()
+ComponentIterator<Model> get_models_iterator()
 {
-  ComponentPool<ModelComponent> *pool = (ComponentPool<ModelComponent> *)component_collection->pools[C_MODEL];
-  if(pool->count == 0) return ComponentIterator<ModelComponent>(nullptr, 0);
-  return ComponentIterator<ModelComponent>(pool->components, pool->count);
+  ComponentPool<Model> *pool = (ComponentPool<Model> *)component_collection->pools[C_MODEL];
+  if(pool->count == 0) return ComponentIterator<Model>(nullptr, 0);
+  return ComponentIterator<Model>(pool->components, pool->count);
 }
-ComponentIterator<ColliderComponent> get_colliders_iterator()
+ComponentIterator<Wall> get_walls_iterator()
 {
-  ComponentPool<ColliderComponent> *pool = (ComponentPool<ColliderComponent> *)component_collection->pools[C_COLLIDER];
-  if(pool->count == 0) return ComponentIterator<ColliderComponent>(nullptr, 0);
-  return ComponentIterator<ColliderComponent>(pool->components, pool->count);
+  ComponentPool<Wall> *pool = (ComponentPool<Wall> *)component_collection->pools[C_WALL];
+  if(pool->count == 0) return ComponentIterator<Wall>(nullptr, 0);
+  return ComponentIterator<Wall>(pool->components, pool->count);
 }
-ComponentIterator<BallComponent> get_balls_iterator()
+ComponentIterator<Ball> get_balls_iterator()
 {
-  ComponentPool<BallComponent> *pool = (ComponentPool<BallComponent> *)component_collection->pools[C_BALL];
-  if(pool->count == 0) return ComponentIterator<BallComponent>(nullptr, 0);
-  return ComponentIterator<BallComponent>(pool->components, pool->count);
+  ComponentPool<Ball> *pool = (ComponentPool<Ball> *)component_collection->pools[C_BALL];
+  if(pool->count == 0) return ComponentIterator<Ball>(nullptr, 0);
+  return ComponentIterator<Ball>(pool->components, pool->count);
 }
-ComponentIterator<PlayerComponent> get_players_iterator()
+ComponentIterator<Player> get_players_iterator()
 {
-  ComponentPool<PlayerComponent> *pool = (ComponentPool<PlayerComponent> *)component_collection->pools[C_PLAYER];
-  if(pool->count == 0) return ComponentIterator<PlayerComponent>(nullptr, 0);
-  return ComponentIterator<PlayerComponent>(pool->components, pool->count);
+  ComponentPool<Player> *pool = (ComponentPool<Player> *)component_collection->pools[C_PLAYER];
+  if(pool->count == 0) return ComponentIterator<Player>(nullptr, 0);
+  return ComponentIterator<Player>(pool->components, pool->count);
 }
 
 
@@ -186,30 +186,30 @@ void init_component_collection()
 {
   component_collection = new ComponentCollection();
 
-  ComponentPool<ModelComponent> *model_pool = new ComponentPool<ModelComponent>();
+  ComponentPool<Model> *model_pool = new ComponentPool<Model>();
   component_collection->pools[C_MODEL] = model_pool;
-  model_pool->components = new ModelComponent[model_pool->capacity];
-  model_pool->components_to_remove = new ModelComponent[model_pool->capacity];
+  model_pool->components = new Model[model_pool->capacity];
+  model_pool->components_to_remove = new Model[model_pool->capacity];
 
 
 
-  ComponentPool<ColliderComponent> *collider_pool = new ComponentPool<ColliderComponent>();
-  component_collection->pools[C_COLLIDER] = collider_pool;
-  collider_pool->components = new ColliderComponent[collider_pool->capacity];
-  collider_pool->components_to_remove = new ColliderComponent[collider_pool->capacity];
+  ComponentPool<Wall> *wall_pool = new ComponentPool<Wall>();
+  component_collection->pools[C_WALL] = wall_pool;
+  wall_pool->components = new Wall[wall_pool->capacity];
+  wall_pool->components_to_remove = new Wall[wall_pool->capacity];
 
 
 
-  ComponentPool<BallComponent> *ball_pool = new ComponentPool<BallComponent>();
+  ComponentPool<Ball> *ball_pool = new ComponentPool<Ball>();
   component_collection->pools[C_BALL] = ball_pool;
-  ball_pool->components = new BallComponent[ball_pool->capacity];
-  ball_pool->components_to_remove = new BallComponent[ball_pool->capacity];
+  ball_pool->components = new Ball[ball_pool->capacity];
+  ball_pool->components_to_remove = new Ball[ball_pool->capacity];
 
 
 
-  ComponentPool<PlayerComponent> *player_pool = new ComponentPool<PlayerComponent>();
+  ComponentPool<Player> *player_pool = new ComponentPool<Player>();
   component_collection->pools[C_PLAYER] = player_pool;
-  player_pool->components = new PlayerComponent[player_pool->capacity];
-  player_pool->components_to_remove = new PlayerComponent[player_pool->capacity];
+  player_pool->components = new Player[player_pool->capacity];
+  player_pool->components_to_remove = new Player[player_pool->capacity];
 }
 

@@ -12,6 +12,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <vector> // timers
+
 
 struct PlatformData
 {
@@ -23,10 +25,36 @@ struct PlatformData
 
   LARGE_INTEGER previous_time;
 
+  std::vector<LARGE_INTEGER> time_stamps;
 };
 
 static PlatformData platform_data = {};
 
+
+
+// In seconds
+void start_profile_timer()
+{
+  LARGE_INTEGER current_time;
+  QueryPerformanceCounter(&current_time);
+  platform_data.time_stamps.push_back(current_time);
+}
+float end_profile_timer()
+{
+  LARGE_INTEGER counts_per_second;
+  QueryPerformanceFrequency(&counts_per_second);
+
+  LARGE_INTEGER current_time;
+  QueryPerformanceCounter(&current_time);
+
+  LONGLONG counts_passed = current_time.QuadPart - platform_data.time_stamps.back().QuadPart;
+  platform_data.time_stamps.pop_back();
+
+  //double counts_per_ms = (double)counts_per_second.QuadPart / 1000.0;
+  double dt = (double)counts_passed / counts_per_second.QuadPart;
+
+  return (float)dt;
+}
 
 void read_input()
 {
@@ -101,9 +129,11 @@ v2 mouse_world_position()
 
 
 
-
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
+  if(ImGui_ImplWin32_WndProcHandler(window, message, wParam, lParam)) return true;
+
   LRESULT result = 0;
 
   switch (message)
@@ -205,7 +235,7 @@ void init_platform()
   BOOL result = SetWindowLong(platform_data.window_handle, GWL_EXSTYLE, WS_EX_LAYERED) ;
   result = SetLayeredWindowAttributes(platform_data.window_handle, RGB(0, 0, 0), 10, LWA_COLORKEY);
 #else
-  unsigned width = 1920;
+  unsigned width = 1024;
   float ratio = 16.0f / 9.0f;
   unsigned monitor_width = width;
   unsigned monitor_height = (unsigned)((1.0f / ratio) * width);
@@ -246,11 +276,9 @@ void platform_events()
   }
 
   if(platform_data.key_states[VK_ESCAPE]) stop_engine();
-
-
-  QueryPerformanceCounter(&platform_data.previous_time);
 }
 
+// Get dt in seconds
 float get_dt()
 {
   LARGE_INTEGER counts_per_second;
@@ -261,8 +289,9 @@ float get_dt()
 
   LONGLONG counts_passed = current_time.QuadPart - platform_data.previous_time.QuadPart;
 
-  double counts_per_ms = (double)counts_per_second.QuadPart / 1000.0;
-  double dt = (double)counts_passed / counts_per_ms;
+  platform_data.previous_time = current_time;
+
+  double dt = (double)counts_passed / counts_per_second.QuadPart;
 
   return (float)dt;
 }

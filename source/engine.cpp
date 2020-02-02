@@ -14,7 +14,43 @@
 #include "player_controller_system.h"
 #include "ball_collision_system.h"
 
+#include "imgui.h" // For displaying dt
+#include <stdio.h> // sprintf
+
 static bool engine_running = false;
+
+
+
+static float update_time_sum = 0.0f;
+static int update_time_counter = 0;
+
+static int update_counter = 0;
+
+
+static void show_profiling()
+{
+  ImGui::Begin("Main");
+
+  char text_buffer[128];
+
+  if(update_time_counter >= 10000)
+  {
+    update_time_sum = 0.0f;
+    update_time_counter = 0;
+  }
+
+  float average_seconds = update_time_sum / update_time_counter;
+  sprintf(text_buffer, "%f ms average", average_seconds * 1000.0f);
+  ImGui::Text(text_buffer);
+
+  static int highest = 0;
+  if(update_counter > highest) highest = update_counter;
+  sprintf(text_buffer, "%d max updates per frame", highest);
+  ImGui::Text(text_buffer);
+
+  ImGui::End();
+
+}
 
 void start_engine()
 {
@@ -40,16 +76,21 @@ void start_engine()
 
 
     float dt = get_dt();
-    if(dt > 0.033f) dt = 0.0033f;
+    if(dt > 0.033f) dt = 0.033f;
 
     static const float TIME_STEP = 0.016f;
 
     static float engine_counter = 0.0f;
     engine_counter += dt;
 
-
-    while(engine_counter >= TIME_STEP)
+    static const int MAX_UPDATES = 5;
+    while(engine_counter >= TIME_STEP && update_counter <= MAX_UPDATES)
     {
+      start_profile_timer();
+      
+      start_frame();
+
+      show_profiling();
 
 
       // Process new game state using input
@@ -60,13 +101,21 @@ void start_engine()
 
 
 
+
       // Present the game
       render();
 
       read_input();
 
+
       engine_counter -= TIME_STEP;
+      update_counter++;
+
+      float time_passed = end_profile_timer();
+      update_time_sum += time_passed;
+      update_time_counter++;
     }
+    update_counter = 0;
 
   }
 

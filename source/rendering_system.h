@@ -12,6 +12,8 @@ v2    get_camera_position();
 
 
 
+void start_frame();
 void render();
+
 void shutdown_renderer();
 

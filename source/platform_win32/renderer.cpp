@@ -20,6 +20,10 @@
 #include "ExplicitPath/d3dx11async.h"
 #include "ExplicitPath/d3dx11tex.h"
 
+#include "imgui.h"
+#include "imgui_impl_dx11.h"
+#include "imgui_impl_win32.h"
+
 #include <vector>
 
 #include <assert.h>
@@ -157,6 +161,34 @@ struct RendererData
 
 
 static RendererData *renderer_data;
+
+
+
+
+
+
+static void imgui_init()
+{
+  // Setup Dear ImGui context
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+  ImGui_ImplWin32_Init(renderer_data->window.handle);
+  ImGui_ImplDX11_Init(renderer_data->resources.device, renderer_data->resources.device_context);
+}
+static void imgui_startframe()
+{
+  ImGui_ImplDX11_NewFrame();
+  ImGui_ImplWin32_NewFrame();
+  ImGui::NewFrame();
+}
+static void imgui_endframe()
+{
+  ImGui::Render();
+  ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+}
+
 
 
 
@@ -997,6 +1029,7 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
 
 
 
+  imgui_init();
 
   renderer_data->camera.width = 20.0f;
 }
@@ -1062,9 +1095,14 @@ static void render_mesh(Mesh *mesh, Camera *camera, Shader *shader, v3 position,
   device_context->DrawIndexed(num_indices, 0, 0);
 }
 
+void start_frame()
+{
+  imgui_startframe();
+}
+
 void render()
 {
-  ComponentIterator<ModelComponent> it = get_models_iterator();
+  ComponentIterator<Model> it = get_models_iterator();
 
   D3DResources *resources = &renderer_data->resources;
   Window *window = &renderer_data->window;
@@ -1079,7 +1117,7 @@ void render()
 
   while(it != nullptr)
   {
-    ModelComponent &model = *it;
+    Model &model = *it;
 
     Mesh *mesh = &renderer_data->quad_mesh;
     Camera *camera = &renderer_data->camera;
@@ -1101,6 +1139,7 @@ void render()
   }
 
 
+  imgui_endframe();
 
   // Swap render buffers
   if(renderer_data->window.vsync) { resources->swap_chain->Present(1, 0); } // Lock to screen refresh rate.

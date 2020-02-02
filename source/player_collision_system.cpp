@@ -12,28 +12,21 @@
 // For resolution
 struct CollisionInfo
 {
-  const ColliderComponent *a;
-  const ColliderComponent *b;
+  Model *a;
+  Model *b;
 
   float depth;
   v2 normal;
 };
 
 
-
-static bool aabb_collision(const ColliderComponent *a_collider, const ColliderComponent *b_collider, CollisionInfo *info)
+// Pass models for resolution later
+static bool aabb_collision(const Rect *a, const Rect *b, Model *a_model, Model *b_model, CollisionInfo *info)
 {
-  assert(a_collider->type == ColliderComponent::RECT);
-  assert(b_collider->type == ColliderComponent::RECT);
-
-  ModelComponent *a_model = (ModelComponent *)a_collider->parent.get_component(C_MODEL);
-  ModelComponent *b_model = (ModelComponent *)b_collider->parent.get_component(C_MODEL);
-
-  v2 a_pos = a_model->position;
-  v2 a_half_scale = a_collider->rect.scale / 2.0f;
-
-  v2 b_pos = b_model->position;
-  v2 b_half_scale = b_collider->rect.scale / 2.0f;
+  v2 a_pos = a->position;
+  v2 a_half_scale = a->scale / 2.0f;
+  v2 b_pos = b->position;
+  v2 b_half_scale = b->scale / 2.0f;
 
   float a_x_min = a_pos.x - a_half_scale.x;
   float a_x_max = a_pos.x + a_half_scale.x;
@@ -70,8 +63,8 @@ static bool aabb_collision(const ColliderComponent *a_collider, const ColliderCo
 
 
 
-  info->a = a_collider;
-  info->b = b_collider;
+  info->a = a_model;
+  info->b = b_model;
   info->depth = depth;
 
   return true;
@@ -79,82 +72,58 @@ static bool aabb_collision(const ColliderComponent *a_collider, const ColliderCo
 
 void update_player_collision_system(float time_step)
 {
-  ComponentIterator<PlayerComponent> player_it = get_players_iterator();
-
-
-
-
   // Temporary
   int num_collisions = 0;
   static const int MAX_COLLISIONS = 32;
   CollisionInfo collisions[MAX_COLLISIONS];
 
 
-
-  while(player_it != nullptr)
+  // Go through all players
+  ComponentIterator<Player> players_it = get_players_iterator();
+  while(players_it != nullptr)
   {
-    PlayerComponent *player_component = &(*player_it);
-    const ColliderComponent *player_collider = (ColliderComponent *)player_component->parent.get_component(C_COLLIDER);
+    Player *player = &(*players_it);
+    Model *player_model = player->parent.get_model();
 
-    ComponentIterator<ColliderComponent> collider_it = get_colliders_iterator();
-    while(collider_it != nullptr)
+    Rect player_rect = Rect(player_model->position, player_model->scale);
+
+    // Check against other players
+    ComponentIterator<Player> other_players_it = ++players_it;
+    while(other_players_it != nullptr)
     {
-      const ColliderComponent *other_collider = &(*collider_it);
-      if(player_collider == other_collider) { ++collider_it; continue; }
-
+      Player *other_player = &(*other_players_it);
+      Model *other_player_model = other_player->parent.get_model();
+      Rect other_player_rect = Rect(other_player_model->position, other_player_model->scale);
 
       CollisionInfo info = {};
-      if(player_collider->type == ColliderComponent::RECT)
+      if(aabb_collision(&player_rect, &other_player_rect, player_model, other_player_model, &info))
       {
-        if(other_collider->type == ColliderComponent::RECT)
-        {
-          if(aabb_collision(player_collider, other_collider, &info))
-          {
-            collisions[num_collisions++] = info;
-          }
-        }
-
-        if(other_collider->type == ColliderComponent::CIRCLE)
-        {
-          /*
-          if(box_circle_collision(a, b, &info))
-          {
-            collisions[num_collisions++] = info;
-          }
-          */
-        }
-      }
-
-
-
-      if(player_collider->type == ColliderComponent::CIRCLE)
-      {
-        if(other_collider->type == ColliderComponent::RECT)
-        {
-          /*
-          if(box_circle_collision(b, a, &info))
-          {
-            collisions[num_collisions++] = info;
-          }
-          */
-        }
-
-        if(other_collider->type == ColliderComponent::CIRCLE)
-        {
-          /*
-          if(circle_circle_collision(a, b, &info))
-          {
-            collisions[num_collisions++] = info;
-          }
-          */
-        }
+        collisions[num_collisions++] = info;
       }
 
       assert(num_collisions < MAX_COLLISIONS);
-      ++collider_it;
+      ++other_players_it;
     }
 
-    ++player_it;
+    // Check against walls
+    ComponentIterator<Wall> walls_it = get_walls_iterator();
+    while(walls_it != nullptr)
+    {
+      Wall *wall = &(*walls_it);
+      Model *wall_model = wall->parent.get_model();
+      Rect wall_rect = Rect(wall_model->position, wall_model->scale);
+
+      CollisionInfo info = {};
+      if(aabb_collision(&player_rect, &wall_rect, player_model, wall_model, &info))
+      {
+        collisions[num_collisions++] = info;
+      }
+
+      assert(num_collisions < MAX_COLLISIONS);
+      ++walls_it;
+    }
+
+    ++players_it;
   }
 
 
@@ -164,65 +133,50 @@ void update_player_collision_system(float time_step)
   {
     CollisionInfo *info = &(collisions[i]);
 
-    ModelComponent *a_model = (ModelComponent *)info->a->parent.get_component(C_MODEL);
-    ModelComponent *b_model  = (ModelComponent *)info->b->parent.get_component(C_MODEL);
+    Player *a_player = info->a->parent.get_player();
+    assert(a_player);
+
+    Player *b_player = info->b->parent.get_player();
 
     // So players won't collide with ghosty Razz
     {
-      PlayerComponent *a_player = (PlayerComponent *)info->a->parent.get_component(C_PLAYER);
-      PlayerComponent *b_player = (PlayerComponent *)info->b->parent.get_component(C_PLAYER);
-      if(a_player && b_player)
+      if(b_player)
       {
-        if(a_player->character_type == PlayerComponent::RAZZ ||
-           b_player->character_type == PlayerComponent::RAZZ)
+        if(a_player->character_type == Player::RAZZ ||
+           b_player->character_type == Player::RAZZ)
         {
           continue;
         }
       }
     }
 
-
-    float mass_sum = info->a->mass + info->b->mass;
-    float a_move_amount = (info->b->mass / mass_sum) * (info->depth / 2.0f);
-    float b_move_amount = (info->a->mass / mass_sum) * (info->depth / 2.0f);
-
-    // player
-    if(!info->a->is_static)
+    // If b is also a player
+    if(b_player)
     {
-      if(info->b->is_static)
-      {
-        a_model->position -= info->normal * info->depth;
-      }
-      else 
-      {
-        a_model->position -= info->normal * a_move_amount;
-      }
+      float mass_sum = a_player->mass + b_player->mass;
+      float a_move_amount = (b_player->mass / mass_sum) * (info->depth / 2.0f);
+      float b_move_amount = (a_player->mass / mass_sum) * (info->depth / 2.0f);
+
+      info->a->position -= info->normal * a_move_amount;
+      info->b->position += info->normal * b_move_amount;
     }
-
-    // other
-    if(!info->b->is_static)
+    else if(info->b->parent.get_wall())
     {
-      if(info->a->is_static)
-      {
-        b_model->position += info->normal * info->depth;
-      }
-      else 
-      {
-        b_model->position += info->normal * b_move_amount;
-      }
+      // b is a wall
+      info->a->position -= info->normal * info->depth;
     }
   }
 
   // Move the players
-  player_it = get_players_iterator();
-  while(player_it != nullptr)
+  players_it = get_players_iterator();
+  while(players_it != nullptr)
   {
-    PlayerComponent *player_component = &(*player_it);
-    ModelComponent *player_model = (ModelComponent *)player_component->parent.get_component(C_MODEL);
+    Player *player = &(*players_it);
+    Model *player_model = (Model *)player->parent.get_component(C_MODEL);
 
-    player_model->position += player_component->velocity * time_step;
+    player_model->position += player->velocity * time_step;
 
-    ++player_it;
+    ++players_it;
   }
 }
 

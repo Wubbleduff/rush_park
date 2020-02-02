@@ -65,7 +65,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>libs\DX\Include;$(IncludePath)</IncludePath>
+    <IncludePath>libs\DX\Include;libs\imgui;$(IncludePath)</IncludePath>
     <LibraryPath>libs\DX\Lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -102,6 +102,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="libs\imgui\imgui.cpp" />
+    <ClCompile Include="libs\imgui\imgui_demo.cpp" />
+    <ClCompile Include="libs\imgui\imgui_draw.cpp" />
+    <ClCompile Include="libs\imgui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="libs\imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="libs\imgui\imgui_widgets.cpp" />
     <ClCompile Include="source\ball_collision_system.cpp" />
     <ClCompile Include="source\component.cpp" />
     <ClCompile Include="source\engine.cpp" />
@@ -204,6 +210,14 @@
     <ClInclude Include="libs\dx\include\explicitpath\XInput.h" />
     <ClInclude Include="libs\dx\include\explicitpath\xma2defs.h" />
     <ClInclude Include="libs\dx\include\explicitpath\xnamath.h" />
+    <ClInclude Include="libs\imgui\imconfig.h" />
+    <ClInclude Include="libs\imgui\imgui.h" />
+    <ClInclude Include="libs\imgui\imgui_impl_dx11.h" />
+    <ClInclude Include="libs\imgui\imgui_impl_win32.h" />
+    <ClInclude Include="libs\imgui\imgui_internal.h" />
+    <ClInclude Include="libs\imgui\imstb_rectpack.h" />
+    <ClInclude Include="libs\imgui\imstb_textedit.h" />
+    <ClInclude Include="libs\imgui\imstb_truetype.h" />
     <ClInclude Include="source\ball_collision_system.h" />
     <ClInclude Include="source\component.h" />
     <ClInclude Include="source\engine.h" />
