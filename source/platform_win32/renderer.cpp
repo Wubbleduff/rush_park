@@ -97,7 +97,7 @@ struct Mesh
   ID3D11Buffer *index_buffer;
 
 
-  unsigned draw_mode = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+  D3D_PRIMITIVE_TOPOLOGY draw_mode = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 
   void normalize();
@@ -141,6 +141,28 @@ struct Camera
   float width;
 };
 
+struct DebugRect
+{
+  v2 position;
+  v2 scale;
+  float rotation;
+  Color color;
+  DebugDrawMode draw_mode;
+};
+
+struct DebugCircle
+{
+  v2 position;
+  float radius;
+  Color color;
+  DebugDrawMode draw_mode;
+};
+
+struct DebugLine
+{
+  v2 start, end;
+  Color color;
+};
 
 struct RendererData
 {
@@ -153,10 +175,18 @@ struct RendererData
   ID3D11Buffer *first_shader_buffer;
 
   Mesh quad_mesh;
+  Mesh circle_mesh;
+  Mesh line_mesh;
+
+
   Texture quad_texture;
   Texture circle_texture;
 
   Camera camera = {};
+
+  std::vector<DebugRect>   debug_rects_to_render;
+  std::vector<DebugCircle> debug_circles_to_render;
+  std::vector<DebugLine>   debug_lines_to_render;
 };
 
 
@@ -324,22 +354,6 @@ static mat4 make_world_matrix(v3 position, v2 scale, float rotation)
   return translation * rotating * scaling;
 }
 
-
-static void make_quad(Mesh::Vertex *vertices, unsigned *indices)
-{
-  vertices[0] = Mesh::Vertex(v3(-0.5f, -0.5f, 0.0f), v2(0.0f, 1.0f)); // Left lower
-  vertices[1] = Mesh::Vertex(v3( 0.5f, -0.5f, 0.0f), v2(1.0f, 1.0f)); // Right lower
-  vertices[2] = Mesh::Vertex(v3( 0.5f,  0.5f, 0.0f), v2(1.0f, 0.0f)); // Right upper
-  vertices[3] = Mesh::Vertex(v3(-0.5f,  0.5f, 0.0f), v2(0.0f, 0.0f)); // Left upper
-
-  indices[0] = 0;
-  indices[1] = 1;
-  indices[2] = 2;
-  indices[3] = 2;
-  indices[4] = 3;
-  indices[5] = 0;
-}
-
 static void set_viewport(float width, float height, v2 offset)
 {
   D3D11_VIEWPORT viewport = {};
@@ -424,6 +438,79 @@ void Mesh::clear_buffers()
 {
   if(index_buffer) index_buffer->Release();
   if(vertex_buffer) vertex_buffer->Release();
+}
+
+
+
+static void set_depth_test(bool use_depth_test)
+{
+  D3DResources *resources = &renderer_data->resources;
+  if(use_depth_test)
+  {
+    resources->device_context->OMSetDepthStencilState(resources->depth_stencil_state, 1);
+  }
+  else
+  {
+    resources->device_context->OMSetDepthStencilState(resources->no_depth_stencil_state, 1);
+  }
+}
+
+static void make_meshes()
+{
+  {
+    // Make quad
+    renderer_data->quad_mesh.vertices.resize(4);
+    renderer_data->quad_mesh.indices.resize(6);
+
+    std::vector<Mesh::Vertex> &vertices = renderer_data->quad_mesh.vertices;
+    std::vector<unsigned> &indices = renderer_data->quad_mesh.indices;
+
+    vertices[0] = Mesh::Vertex(v3(-0.5f, -0.5f, 0.0f), v2(0.0f, 1.0f)); // Left lower
+    vertices[1] = Mesh::Vertex(v3( 0.5f, -0.5f, 0.0f), v2(1.0f, 1.0f)); // Right lower
+    vertices[2] = Mesh::Vertex(v3( 0.5f,  0.5f, 0.0f), v2(1.0f, 0.0f)); // Right upper
+    vertices[3] = Mesh::Vertex(v3(-0.5f,  0.5f, 0.0f), v2(0.0f, 0.0f)); // Left upper
+    indices[0] = 0;
+    indices[1] = 1;
+    indices[2] = 2;
+    indices[3] = 2;
+    indices[4] = 3;
+    indices[5] = 0;
+    renderer_data->quad_mesh.fill_buffers(renderer_data->resources.device);
+  }
+
+
+  {
+    // Make circle
+    static const int CIRCLE_DIVISIONS = 42;
+    renderer_data->circle_mesh.vertices.resize(CIRCLE_DIVISIONS);
+    renderer_data->circle_mesh.indices.resize(CIRCLE_DIVISIONS * 2);
+    for(int i = 0; i < CIRCLE_DIVISIONS; i++)
+    {
+      float t = ((float)i / CIRCLE_DIVISIONS) * 2.0f * PI;
+      float x = cosf(t);
+      float y = sinf(t);
+      renderer_data->circle_mesh.vertices[i] = Mesh::Vertex(v3(x, y, 0.0f), v2(0.0f, 0.0f));
+    }
+    int vertex_index = 0;
+    for(int i = 0; i < CIRCLE_DIVISIONS * 2; i += 2)
+    {
+      renderer_data->circle_mesh.indices[i] = vertex_index++;
+      renderer_data->circle_mesh.indices[i + 1] = vertex_index % CIRCLE_DIVISIONS;
+    }
+    renderer_data->circle_mesh.draw_mode = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+    renderer_data->circle_mesh.fill_buffers(renderer_data->resources.device);
+  }
+
+
+  {
+    // Make line
+    renderer_data->line_mesh.vertices.resize(2);
+    renderer_data->line_mesh.indices.resize(2); 
+    renderer_data->line_mesh.indices[0] = 0;
+    renderer_data->line_mesh.indices[1] = 1;
+    renderer_data->line_mesh.draw_mode = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+    renderer_data->line_mesh.fill_buffers(renderer_data->resources.device);
+  }
 }
 
 
@@ -650,7 +737,7 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
 
   // Set up the description of the stencil state.
   D3D11_DEPTH_STENCIL_DESC depth_stencil_desc = {};
-  depth_stencil_desc.DepthEnable = false;
+  depth_stencil_desc.DepthEnable = true;
   depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
   depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
 
@@ -677,7 +764,8 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
   device_context->OMSetDepthStencilState(depth_stencil_state, 1);
 
 
-  D3D11_DEPTH_STENCIL_DESC no_depth_stencil_desc = {};
+  D3D11_DEPTH_STENCIL_DESC no_depth_stencil_desc = depth_stencil_desc;
+  no_depth_stencil_desc.DepthEnable = false;
   result = device->CreateDepthStencilState(&no_depth_stencil_desc, &no_depth_stencil_state);
   assert(!FAILED(result));
 
@@ -802,11 +890,6 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
 
 
 
-  // Make primitive quad
-  renderer_data->quad_mesh.vertices.resize(4);
-  renderer_data->quad_mesh.indices.resize(6);
-  make_quad(renderer_data->quad_mesh.vertices.data(), renderer_data->quad_mesh.indices.data());
-  renderer_data->quad_mesh.fill_buffers(device);
 
 
 
@@ -1015,6 +1098,9 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
     renderer_data->circle_texture.resource = circle_target_view;
   }
 
+  // Initialize the game meshes
+  make_meshes();
+
 
 
 
@@ -1114,29 +1200,66 @@ void render()
 
 
 
+  Camera *camera = &renderer_data->camera;
+  Shader *shader = &renderer_data->quad_shader;
 
+  set_depth_test(true);
   while(it != nullptr)
   {
     Model &model = *it;
-
     Mesh *mesh = &renderer_data->quad_mesh;
-    Camera *camera = &renderer_data->camera;
-    Shader *shader = &renderer_data->quad_shader;
 
     v3 position = v3(model.position, model.depth);
     v2 scale = model.scale;
     float rotation = model.rotation;
-
     v4 color = v4(model.color.r, model.color.g, model.color.b, model.color.a);
-
     Texture *texture = nullptr;
     if(model.texture && strcmp(model.texture, "ball") == 0) texture = &(renderer_data->circle_texture);
     else texture = &(renderer_data->quad_texture);
 
-    render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, mesh->draw_mode);
 
     ++it;
   }
+
+
+  set_depth_test(false);
+
+  // Debug rects
+  for(unsigned i = 0; i < renderer_data->debug_rects_to_render.size(); i++)
+  {
+    DebugRect &rect = renderer_data->debug_rects_to_render[i];
+    Mesh *mesh = &renderer_data->quad_mesh;
+
+    v3 position = v3(rect.position, 0.0f);
+    v2 scale = rect.scale;
+    float rotation = rect.rotation;
+    v4 color = v4(rect.color.r, rect.color.g, rect.color.b, rect.color.a);
+    Texture *texture = &(renderer_data->quad_texture);
+    bool wireframe = false;
+    if(rect.draw_mode == WIREFRAME) wireframe = true;
+
+    render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, mesh->draw_mode, wireframe);
+  }
+  renderer_data->debug_rects_to_render.clear();
+
+  // Debug circles
+  for(unsigned i = 0; i < renderer_data->debug_circles_to_render.size(); i++)
+  {
+    DebugCircle &circle = renderer_data->debug_circles_to_render[i];
+    Mesh *mesh = &renderer_data->circle_mesh;
+
+    v3 position = v3(circle.position, 0.0f);
+    v2 scale = v2(circle.radius, circle.radius);
+    float rotation = 0.0f;
+    v4 color = v4(circle.color.r, circle.color.g, circle.color.b, circle.color.a);
+    Texture *texture = &(renderer_data->quad_texture);
+    bool wireframe = false;
+    if(circle.draw_mode == WIREFRAME) wireframe = true;
+
+    render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, mesh->draw_mode, wireframe);
+  }
+  renderer_data->debug_circles_to_render.clear();
 
 
   imgui_endframe();
@@ -1232,6 +1355,35 @@ void shutdown_renderer()
   }
 #endif
 }
+
+
+void debug_draw_rect(v2 position, v2 scale, float rotation, Color color, DebugDrawMode draw_mode)
+{
+  DebugRect rect =
+  {
+    position,
+    scale,
+    rotation,
+    color,
+    draw_mode
+  };
+
+  renderer_data->debug_rects_to_render.push_back(rect);
+}
+
+void debug_draw_circle(v2 position, float radius, Color color, DebugDrawMode draw_mode)
+{
+  DebugCircle circle =
+  {
+    position,
+    radius,
+    color,
+    draw_mode
+  };
+
+  renderer_data->debug_circles_to_render.push_back(circle);
+}
+
 
 v2 client_to_world(v2 window_client_pos)
 {

@@ -2,6 +2,8 @@
 #include "ball_collision_system.h"
 #include "component.h"
 
+#include "rendering_system.h" // Debug draw
+
 #include <assert.h>
 
 
@@ -390,6 +392,16 @@ void update_ball_collision_system(float time_step)
 
 void update_ball_collision_system(float time_step)
 {
+  ComponentIterator<Ball> ball_it = get_balls_iterator();
+  while(ball_it != nullptr)
+  {
+    Ball *ball = &(*ball_it);
+    Model *ball_model = (Model *)ball->parent.get_component(C_MODEL);
+
+    debug_draw_circle(ball_model->position, ball_model->scale.x / 2.0f);
+
+    ++ball_it;
+  }
 }
 
 

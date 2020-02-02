@@ -3,6 +3,8 @@
 
 #include "component.h"
 
+#include "rendering_system.h" // Debug draw
+
 #include "my_math.h"
 
 #include <stdlib.h>
@@ -18,6 +20,22 @@ struct CollisionInfo
   float depth;
   v2 normal;
 };
+
+
+// Debugging
+static void draw_debug_players()
+{
+  ComponentIterator<Player> players_it = get_players_iterator();
+  while(players_it != nullptr)
+  {
+    Player *player = &(*players_it);
+    Model *player_model = (Model *)player->parent.get_component(C_MODEL);
+
+    debug_draw_rect(player_model->position, player_model->scale, 0.0f);
+
+    ++players_it;
+  }
+}
 
 
 // Pass models for resolution later
@@ -178,5 +196,11 @@ void update_player_collision_system(float time_step)
 
     ++players_it;
   }
+
+
+
+
+  // Debugging
+  draw_debug_players();
 }
 
