@@ -15,6 +15,7 @@ enum DebugDrawMode
 
 void debug_draw_rect(v2 position, v2 scale, float rotation, Color color = Color(0.0f, 1.0f, 0.0f), DebugDrawMode draw_mode = WIREFRAME);
 void debug_draw_circle(v2 position, float radius, Color color = Color(0.0f, 1.0f, 0.0f), DebugDrawMode draw_mode = WIREFRAME);
+void debug_draw_line(v2 start, v2 end, Color color = Color(0.0f, 1.0f, 0.0f));
 
 void  set_camera_position(v2 position);
 v2    get_camera_position();

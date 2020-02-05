@@ -21,6 +21,10 @@ struct CollisionInfo
   v2 normal;
 };
 
+static const int COLLISION_ITERATIONS = 4;
+static const int MAX_COLLISIONS = 32;
+
+
 
 // Debugging
 static void draw_debug_players()
@@ -88,13 +92,11 @@ static bool aabb_collision(const Rect *a, const Rect *b, Model *a_model, Model *
   return true;
 }
 
-void update_player_collision_system(float time_step)
-{
-  // Temporary
-  int num_collisions = 0;
-  static const int MAX_COLLISIONS = 32;
-  CollisionInfo collisions[MAX_COLLISIONS];
 
+
+static void check_collisions(CollisionInfo *collisions, int *num_collisions)
+{
+  *num_collisions = 0;
 
   // Go through all players
   ComponentIterator<Player> players_it = get_players_iterator();
@@ -116,10 +118,10 @@ void update_player_collision_system(float time_step)
       CollisionInfo info = {};
       if(aabb_collision(&player_rect, &other_player_rect, player_model, other_player_model, &info))
       {
-        collisions[num_collisions++] = info;
+        collisions[(*num_collisions)++] = info;
       }
 
-      assert(num_collisions < MAX_COLLISIONS);
+      assert(*num_collisions < MAX_COLLISIONS);
       ++other_players_it;
     }
 
@@ -134,20 +136,21 @@ void update_player_collision_system(float time_step)
       CollisionInfo info = {};
       if(aabb_collision(&player_rect, &wall_rect, player_model, wall_model, &info))
       {
-        collisions[num_collisions++] = info;
+        collisions[(*num_collisions)++] = info;
       }
 
-      assert(num_collisions < MAX_COLLISIONS);
+      assert(*num_collisions < MAX_COLLISIONS);
       ++walls_it;
     }
 
     ++players_it;
   }
+}
 
-
-
+static void resolve_collisions(CollisionInfo *collisions, const int *num_collisions)
+{
   // Resolve collisions
-  for(int i = 0; i < num_collisions; i++)
+  for(int i = 0; i < *num_collisions; i++)
   {
     CollisionInfo *info = &(collisions[i]);
 
@@ -184,9 +187,16 @@ void update_player_collision_system(float time_step)
       info->a->position -= info->normal * info->depth;
     }
   }
+}
+
+void update_player_collision_system(float time_step)
+{
+  // Temporary
+  int num_collisions = 0;
+  CollisionInfo collisions[MAX_COLLISIONS];
 
   // Move the players
-  players_it = get_players_iterator();
+  ComponentIterator<Player> players_it = get_players_iterator();
   while(players_it != nullptr)
   {
     Player *player = &(*players_it);
@@ -198,6 +208,12 @@ void update_player_collision_system(float time_step)
   }
 
 
+  // Check and resolve collisions
+  for(int i = 0; i < COLLISION_ITERATIONS; i++)
+  {
+    check_collisions(collisions, &num_collisions);
+    resolve_collisions(collisions, &num_collisions);
+  }
 
 
   // Debugging

@@ -1262,6 +1262,27 @@ void render()
   renderer_data->debug_circles_to_render.clear();
 
 
+  // Debug lines
+  for(unsigned i = 0; i < renderer_data->debug_lines_to_render.size(); i++)
+  {
+    DebugLine &line = renderer_data->debug_lines_to_render[i];
+
+    Mesh *mesh = &renderer_data->line_mesh;
+
+    v4 color = v4(line.color.r, line.color.g, line.color.b, line.color.a);
+
+    Mesh::Vertex v[] =
+    {
+      Mesh::Vertex(v3(line.start, 0.0f), v2()),
+      Mesh::Vertex(v3(line.end, 0.0f),   v2()),
+    };
+    mesh->update_data(resources->device_context, v, sizeof(v));
+
+    render_mesh(mesh, camera, shader, v3(), v2(1.0f, 1.0f), 0.0f, color, 0, mesh->draw_mode);
+  }
+  renderer_data->debug_lines_to_render.clear();
+
+
   imgui_endframe();
 
   // Swap render buffers
@@ -1382,6 +1403,12 @@ void debug_draw_circle(v2 position, float radius, Color color, DebugDrawMode dra
   };
 
   renderer_data->debug_circles_to_render.push_back(circle);
+}
+
+void debug_draw_line(v2 start, v2 end, Color color)
+{
+  DebugLine line = { start, end, color };
+  renderer_data->debug_lines_to_render.push_back(line);
 }
 
 

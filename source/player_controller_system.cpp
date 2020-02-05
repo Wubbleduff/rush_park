@@ -131,6 +131,7 @@ void update_player_controller_system(float time_step)
       player->num_balls_hit_last_frame = 0;
     }
 
+
     ++player_it;
     ++i;
   }
