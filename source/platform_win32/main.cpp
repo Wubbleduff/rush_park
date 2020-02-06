@@ -117,9 +117,7 @@ v2 mouse_world_position()
 {
   POINT window_client_pos;
   BOOL success = GetCursorPos(&window_client_pos);
-  assert(success);
   success = ScreenToClient(platform_data.window_handle, &window_client_pos);
-  assert(success);
 
   return client_to_world(v2(window_client_pos.x, window_client_pos.y));
 }
@@ -235,7 +233,7 @@ void init_platform()
   BOOL result = SetWindowLong(platform_data.window_handle, GWL_EXSTYLE, WS_EX_LAYERED) ;
   result = SetLayeredWindowAttributes(platform_data.window_handle, RGB(0, 0, 0), 10, LWA_COLORKEY);
 #else
-  unsigned width = 1024;
+  unsigned width = 1920;
   float ratio = 16.0f / 9.0f;
   unsigned monitor_width = width;
   unsigned monitor_height = (unsigned)((1.0f / ratio) * width);

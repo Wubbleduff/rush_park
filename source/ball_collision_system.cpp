@@ -3,11 +3,12 @@
 #include "component.h"
 
 #include "rendering_system.h" // Debug draw
+#include "game_input.h"
+#include "imgui.h"
 
 #include <assert.h>
 
 
-#if 0
 const static int MAX_BALL_COLLISIONS = 128;
 
 struct Line
@@ -28,19 +29,15 @@ struct Circle
 // For resolution
 struct BallCollisionInfo
 {
-  const ColliderComponent *a;
-  const ColliderComponent *b;
+  //const EntityHandle b;
 
   float dist_t;
   v2 normal;
 };
 
 #if 0
-static bool circle_bb_collision(const ColliderComponent *a_collider, const ColliderComponent *b_collider, BallCollisionInfo *info)
+static bool circle_bb_collision()
 {
-  assert(a_collider->type == ColliderComponent::CIRCLE);
-  assert(b_collider->type == ColliderComponent::RECT);
-
   ModelComponent *a_model = (ModelComponent *)a_collider->parent.get_component(C_MODEL);
   ModelComponent *b_model = (ModelComponent *)b_collider->parent.get_component(C_MODEL);
 
@@ -128,7 +125,7 @@ static bool line_circle_collision(Line line, Circle circle, float *dist_t, v2 *n
       return false;
     }
     // no intersection: FallShort, Past, CompletelyInside
-    return false ;
+    return false;
   }
 }
 
@@ -136,21 +133,29 @@ static bool line_circle_collision(Line line, Circle circle, float *dist_t, v2 *n
 // normal returns the normal to b
 static bool line_line_collision(Line a, Line b, float *dist_t, v2 *normal)
 {
-  return false;
+  v2 a_n = unit(find_ccw_normal(a.b - a.a));
+  v2 b_n = unit(find_ccw_normal(b.b - b.a));
+
+  if(dot(b.a - a.a, a_n) * dot(b.b - a.a, a_n) >= 0.0f) return false; // b crosses a
+  if(dot(a.a - b.a, b_n) * dot(a.b - b.a, b_n) >= 0.0f) return false; // a crosses b
+  if(dot(a.b - a.a, find_ccw_normal(b.b - b.a)) == 0.0f) return false; // collinear
+  
+  *dist_t = 1.0f - ( (a.b * b_n - b.a * b_n) / (a.b * b_n - a.a * b_n) );
+  *normal = b_n;
+
+  return true;
 }
 
-static void check_swept_ball(ColliderComponent *ball_collider, v2 ball_position, v2 ball_velocity, float ball_radius, BallCollisionInfo *collisions, int *num_collisions)
+static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, float ball_radius, BallCollisionInfo *collisions, int *num_collisions)
 {
   *num_collisions = 0;
 
-  // Go through all other colliders
-  ComponentIterator<ColliderComponent> collider_it = get_colliders_iterator();
-  while(collider_it != nullptr)
+  // Go through walls
+  ComponentIterator<Wall> wall_it = get_walls_iterator();
+  while(wall_it != nullptr)
   {
-    // Get the other collider
-    ColliderComponent *other_collider = &(*collider_it);
-    ModelComponent *other_model = (ModelComponent *)other_collider->parent.get_component(C_MODEL);
-    if(ball_collider == other_collider) { ++collider_it; continue; }
+    Wall *wall = &(*wall_it);
+    Model *wall_model = (Model *)wall->parent.get_component(C_MODEL);
     
     // Create the ball's line
     Line travel_line = Line(ball_position, ball_position + ball_velocity);
@@ -159,14 +164,13 @@ static void check_swept_ball(ColliderComponent *ball_collider, v2 ball_position,
 
 
     // Sweep circle against other rectangle
-    assert(other_collider->type == ColliderComponent::RECT);
 
     // Create the corners and edges
     Circle corners[4];
     Line edges[4];
     {
-      v2 rect_pos = other_model->position;
-      v2 half_scale = other_collider->rect.scale / 2.0f;
+      v2 rect_pos = wall_model->position;
+      v2 half_scale = wall_model->scale / 2.0f;
 
       v2 rect_points[4];
       rect_points[0] = rect_pos + v2(-half_scale.x, -half_scale.y); // Bottom left
@@ -226,8 +230,8 @@ static void check_swept_ball(ColliderComponent *ball_collider, v2 ball_position,
     if(hit_anything)
     {
       BallCollisionInfo info;
-      info.a = ball_collider;
-      info.b = other_collider;
+      //info.a = ball_collider;
+      //info.b = other_collider;
       info.dist_t = closest_dist_t;
       info.normal = closest_normal;
 
@@ -236,86 +240,19 @@ static void check_swept_ball(ColliderComponent *ball_collider, v2 ball_position,
       *num_collisions++;
     }
 
-    ++collider_it;
+    ++wall_it;
   }
 }
 
 
-
-
-
-#if 0
 void update_ball_collision_system(float time_step)
 {
-  ComponentIterator<BallComponent> ball_it = get_balls_iterator();
+  ComponentIterator<Ball> ball_it_temp = get_balls_iterator();
+  Model *ball_model_temp = (Model *)(*ball_it_temp).parent.get_component(C_MODEL);
+  if(ImGui::Button("Blast")) (*ball_it_temp).velocity += v2(50.0f, 50.0f);
+  debug_draw_line(ball_model_temp->position, ball_model_temp->position + (*ball_it_temp).velocity * time_step);
 
-  // Check collisions
-  while(ball_it != nullptr)
-  {
-    BallComponent *ball_component = &(*ball_it);
-    ColliderComponent *ball_collider = (ColliderComponent *)ball_component->parent.get_component(C_COLLIDER);
-
-    assert(ball_collider->type == ColliderComponent::CIRCLE);
-
-    ComponentIterator<ColliderComponent> collider_it = get_colliders_iterator();
-    while(collider_it != nullptr)
-    {
-      ColliderComponent *other_collider = &(*collider_it);
-
-      if(ball_collider == other_collider) { ++collider_it; continue; }
-      
-      assert(other_collider->type == ColliderComponent::RECT);
-
-      BallCollisionInfo info;
-      ModelComponent *ball_model = (ModelComponent *)ball_component->parent.get_component(C_MODEL);
-      PlayerComponent *player = (PlayerComponent *)other_collider->parent.get_component(C_PLAYER);
-      if(circle_bb_collision(ball_collider, other_collider, &info))
-      {
-        if(player == nullptr)
-        {
-          ball_component->velocity = reflect(ball_component->velocity, info.normal);
-        }
-      }
-
-
-
-      ++collider_it;
-    }
-
-    ++ball_it;
-  }
-
-
-
-
-  // Resolve collisions
-
-
-
-
-  ball_it = get_balls_iterator();
-  while(ball_it != nullptr)
-  {
-    BallComponent *ball = &(*ball_it);
-    ModelComponent *model = (ModelComponent *)ball->parent.get_component(C_MODEL);
-
-
-    ball->velocity -= ball->velocity * ball->drag * time_step;
-    model->position += ball->velocity * ball->speed * time_step;
-
-
-    ++ball_it;
-  }
-}
-#endif
-
-
-
-#if 1
-
-void update_ball_collision_system(float time_step)
-{
-  return;
+  if(!button_toggled_down(0, INPUT_SWING)) return;
 
   // For each ball
   //   while will not collide
@@ -326,7 +263,7 @@ void update_ball_collision_system(float time_step)
   //     resolve
   //
 
-  ComponentIterator<BallComponent> ball_it = get_balls_iterator();
+  ComponentIterator<Ball> ball_it = get_balls_iterator();
 
   static int num_collisions = 0;
   static BallCollisionInfo collisions[MAX_BALL_COLLISIONS];
@@ -334,20 +271,20 @@ void update_ball_collision_system(float time_step)
   // For each ball
   while(ball_it != nullptr)
   {
-    BallComponent *ball = &(*ball_it);
-    ModelComponent *ball_model = (ModelComponent *)ball->parent.get_component(C_MODEL);
-    ColliderComponent *ball_collider = (ColliderComponent *)ball->parent.get_component(C_COLLIDER);
-    assert(ball_collider->type == ColliderComponent::CIRCLE);
+    Ball *ball = &(*ball_it);
+    Model *ball_model = (Model *)ball->parent.get_component(C_MODEL);
+
+    debug_draw_circle(ball_model->position, ball_model->scale.x / 2.0f);
 
     v2 ghost_position = ball_model->position;
     v2 ghost_velocity = ball->velocity * time_step;
-    const float ghost_radius = ball_collider->circle.radius;
+    const float ghost_radius = ball_model->scale.x;
 
     // Resolve until at destination
     while(true)
     {
       // Sweep circle along travel path and get collision info
-      check_swept_ball(ball_collider, ghost_position, ghost_velocity, ghost_radius, collisions, &num_collisions);
+      check_swept_ball(ball, ghost_position, ghost_velocity, ghost_radius, collisions, &num_collisions);
 
       // Done if no more collisions will happen
       if(num_collisions == 0) break;
@@ -359,8 +296,7 @@ void update_ball_collision_system(float time_step)
         if(collisions[i].dist_t < earliest_collision->dist_t) earliest_collision = &(collisions[i]);
       }
 
-      // Decide how to resolve the collision based on what it collided with
-      
+
 
 
       // Resolve
@@ -376,34 +312,39 @@ void update_ball_collision_system(float time_step)
 
     // Finalize the ball
     ball_model->position = ghost_position;
-    ball->velocity = unit(ghost_velocity) * length(ball->velocity);
+
+    if(length_squared(ghost_velocity) == 0.0f) ball->velocity = v2(0.0f, 0.0f);
+    else ball->velocity = unit(ghost_velocity) * length(ball->velocity);
     ball->velocity -= ball->velocity * ball->drag * time_step;
-  }
 
-}
-
-#endif
-
-
-
-
-
-#endif
-
-void update_ball_collision_system(float time_step)
-{
-
-  ComponentIterator<Ball> ball_it = get_balls_iterator();
-  while(ball_it != nullptr)
-  {
-    Ball *ball = &(*ball_it);
-    Model *ball_model = (Model *)ball->parent.get_component(C_MODEL);
-
-    debug_draw_circle(ball_model->position, ball_model->scale.x / 2.0f);
-
+    if(ImGui::Button("Blast")) ball->velocity += v2(50.0f, 50.0f);
+    //debug_draw_line(ball_model->position, ball_model->position + ball->velocity);
 
     ++ball_it;
   }
+
+
+
+  /*
+  Line a = Line(v2(), v2(2.0f, 2.0f));
+  Line b = Line(v2(2.0f, 0.0f), v2(2.0f, 0.0f));
+  b.b = mouse_world_position();
+
+  Color c = Color(1.0f, 0.0f, 0.0f);
+  float t = 0.0f;
+  v2 n;
+
+  if(line_line_collision(a, b, &t, &n))
+  {
+    c = Color(1.0f, 1.0f, 0.0f);
+    debug_draw_circle((a.b - a.a) * t, 0.1f);
+  }
+
+  debug_draw_line(a.a, a.b, c);
+  debug_draw_line(b.a, b.b, c);
+  */
+
 }
+
 
 

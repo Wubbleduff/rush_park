@@ -108,7 +108,8 @@ static void check_collisions(CollisionInfo *collisions, int *num_collisions)
     Rect player_rect = Rect(player_model->position, player_model->scale);
 
     // Check against other players
-    ComponentIterator<Player> other_players_it = ++players_it;
+    ComponentIterator<Player> other_players_it = players_it;
+    ++other_players_it;
     while(other_players_it != nullptr)
     {
       Player *other_player = &(*other_players_it);
