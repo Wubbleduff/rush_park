@@ -489,7 +489,7 @@ static void make_meshes()
       float t = ((float)i / CIRCLE_DIVISIONS) * 2.0f * PI;
       float x = cosf(t);
       float y = sinf(t);
-      renderer_data->circle_mesh.vertices[i] = Mesh::Vertex(v3(x, y, 0.0f), v2(0.0f, 0.0f));
+      renderer_data->circle_mesh.vertices[i] = Mesh::Vertex(v3(x, y, 0.0f) * 0.5f, v2(0.0f, 0.0f));
     }
     int vertex_index = 0;
     for(int i = 0; i < CIRCLE_DIVISIONS * 2; i += 2)
@@ -1250,7 +1250,7 @@ void render()
     Mesh *mesh = &renderer_data->circle_mesh;
 
     v3 position = v3(circle.position, 0.0f);
-    v2 scale = v2(circle.radius, circle.radius);
+    v2 scale = v2(circle.radius, circle.radius) * 2.0f;
     float rotation = 0.0f;
     v4 color = v4(circle.color.r, circle.color.g, circle.color.b, circle.color.a);
     Texture *texture = &(renderer_data->quad_texture);

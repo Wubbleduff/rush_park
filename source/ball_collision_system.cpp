@@ -11,6 +11,8 @@
 
 const static int MAX_BALL_COLLISIONS = 128;
 
+static float PAD_EPSILON = 0.05f;
+
 struct Line
 {
   v2 a, b;
@@ -106,24 +108,28 @@ static bool line_circle_collision(Line line, Circle circle, float *dist_t, v2 *n
     //          -o->             --|-->  |            |  --|->
     // Impale(t1 hit,t2 hit), Poke(t1 hit,t2>1), ExitWound(t1<0, t2 hit), 
 
+
     if(t1 >= 0.0f && t1 <= 1.0f)
     {
       // t1 is the intersection, and it's closer than t2
       // (since t1 uses -b - discriminant)
       // Impale, Poke
+      
       *dist_t = t1;
-      v2 x_point = line.a + d * t1;
-      *normal = x_point - circle.position;
-      return true ;
+      v2 x_point = line.a + d * *dist_t;
+      *normal = unit(x_point - circle.position);
+      return true;
     }
 
-    // here t1 didn't intersect so we are either started
-    // inside the sphere or completely past it
     if(t2 >= 0.0f && t2 <= 1.0f)
     {
       // ExitWound
+      //*dist_t = t2;
+      //v2 x_point = line.a + d * t1;
+      //*normal = x_point - circle.position;
       return false;
     }
+
     // no intersection: FallShort, Past, CompletelyInside
     return false;
   }
@@ -182,6 +188,8 @@ static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, flo
       for(int i = 0; i < 4; i++)
       {
         corners[i] = Circle(rect_points[i], ball_radius);
+
+        //debug_draw_circle(corners[i].position, ball_radius);
       }
       // Edges
       for(int i = 0; i < 4; i++)
@@ -237,7 +245,7 @@ static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, flo
 
       assert(*num_collisions < MAX_BALL_COLLISIONS);
       collisions[*num_collisions] = info;
-      *num_collisions++;
+      (*num_collisions)++;
     }
 
     ++wall_it;
@@ -247,13 +255,6 @@ static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, flo
 
 void update_ball_collision_system(float time_step)
 {
-  ComponentIterator<Ball> ball_it_temp = get_balls_iterator();
-  Model *ball_model_temp = (Model *)(*ball_it_temp).parent.get_component(C_MODEL);
-  if(ImGui::Button("Blast")) (*ball_it_temp).velocity += v2(50.0f, 50.0f);
-  debug_draw_line(ball_model_temp->position, ball_model_temp->position + (*ball_it_temp).velocity * time_step);
-
-  if(!button_toggled_down(0, INPUT_SWING)) return;
-
   // For each ball
   //   while will not collide
   //     sweep circle along travel path and get collision info
@@ -278,13 +279,19 @@ void update_ball_collision_system(float time_step)
 
     v2 ghost_position = ball_model->position;
     v2 ghost_velocity = ball->velocity * time_step;
-    const float ghost_radius = ball_model->scale.x;
+    const float ghost_radius = ball_model->scale.x / 2.0f;
+
+    //ghost_velocity = mouse_world_position();
 
     // Resolve until at destination
     while(true)
     {
       // Sweep circle along travel path and get collision info
+      num_collisions = 0;
       check_swept_ball(ball, ghost_position, ghost_velocity, ghost_radius, collisions, &num_collisions);
+
+      debug_draw_line(ghost_position, ghost_position + ghost_velocity);
+      debug_draw_circle(ghost_position, ghost_radius);
 
       // Done if no more collisions will happen
       if(num_collisions == 0) break;
@@ -293,56 +300,86 @@ void update_ball_collision_system(float time_step)
       BallCollisionInfo *earliest_collision = nullptr;
       for(int i = 0; i < num_collisions; i++)
       {
-        if(collisions[i].dist_t < earliest_collision->dist_t) earliest_collision = &(collisions[i]);
+        if(earliest_collision == nullptr || collisions[i].dist_t < earliest_collision->dist_t) earliest_collision = &(collisions[i]);
       }
 
 
 
 
       // Resolve
-      ghost_position += ghost_velocity * earliest_collision->dist_t;
-      ghost_velocity *= earliest_collision->dist_t;
-      ghost_velocity = reflect(-ghost_velocity, earliest_collision->normal);
+
+      v2 vel_to_object = ghost_velocity * earliest_collision->dist_t;
+      vel_to_object -= unit(vel_to_object) * PAD_EPSILON;
+      ghost_position += vel_to_object;
+      ghost_velocity = ghost_velocity * (1.0f - earliest_collision->dist_t);
+      ghost_velocity = reflect(ghost_velocity, earliest_collision->normal);
+
+      static const float STILL_EPSILON = 0.001f;
+      if(length(ghost_velocity) <= STILL_EPSILON) ghost_velocity = v2(0.0f, 0.0f);
+
+      debug_draw_line(ghost_position, ghost_position + ghost_velocity);
     }
 
 
-    // Move the rest of the ghost velocity
-    ghost_position += ghost_velocity;
-
-
     // Finalize the ball
-    ball_model->position = ghost_position;
+    //if(button_toggled_down(0, INPUT_SWING))
+    {
+      // Move the rest of the ghost velocity
+      ghost_position += ghost_velocity;
 
-    if(length_squared(ghost_velocity) == 0.0f) ball->velocity = v2(0.0f, 0.0f);
-    else ball->velocity = unit(ghost_velocity) * length(ball->velocity);
-    ball->velocity -= ball->velocity * ball->drag * time_step;
+      ball_model->position = ghost_position;
 
-    if(ImGui::Button("Blast")) ball->velocity += v2(50.0f, 50.0f);
-    //debug_draw_line(ball_model->position, ball_model->position + ball->velocity);
+      if(length_squared(ghost_velocity) == 0.0f) ball->velocity = v2(0.0f, 0.0f);
+      else ball->velocity = unit(ghost_velocity) * length(ball->velocity);
+      ball->velocity -= ball->velocity * ball->drag * time_step;
+    }
+
+    if(ImGui::Button("Blast")) ball->velocity += v2(20.0f, 50.0f);
 
     ++ball_it;
   }
 
 
 
-  /*
+
+
+#if 0
   Line a = Line(v2(), v2(2.0f, 2.0f));
-  Line b = Line(v2(2.0f, 0.0f), v2(2.0f, 0.0f));
-  b.b = mouse_world_position();
+  Line b = Line(v2(0.0f, 2.0f), v2(2.0f, 0.0f));
+  static Circle circle = Circle(v2(4.0f, 3.0f), 1.0f);
+
+  if(button_state(0, INPUT_SWING)) circle.position = mouse_world_position();
+
+
+  a.b = mouse_world_position();
 
   Color c = Color(1.0f, 0.0f, 0.0f);
   float t = 0.0f;
   v2 n;
 
+#if 0
   if(line_line_collision(a, b, &t, &n))
   {
     c = Color(1.0f, 1.0f, 0.0f);
-    debug_draw_circle((a.b - a.a) * t, 0.1f);
+    debug_draw_circle(a.a + (a.b - a.a) * t, 0.1f);
+    debug_draw_line(b.a + (b.b - b.a) * 0.5f, b.a + (b.b - b.a) * 0.5f + n, Color(0.5f, 0.5f, 0.0f));
+    ImGui::DragFloat("t", &t);
+  }
+#endif
+
+  if(line_circle_collision(a, circle, &t, &n))
+  {
+    c = Color(1.0f, 1.0f, 0.0f);
+    debug_draw_circle(a.a + (a.b - a.a) * t, 0.1f);
   }
 
   debug_draw_line(a.a, a.b, c);
   debug_draw_line(b.a, b.b, c);
-  */
+  debug_draw_circle(circle.position, circle.radius, c);
+#endif
+
+  ImGui::DragFloat("epsilon", &PAD_EPSILON, 0.01f);
+  PAD_EPSILON = clamp(PAD_EPSILON, 0.0f, 1.0f);
 
 }
 
