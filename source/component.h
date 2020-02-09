@@ -41,7 +41,8 @@ struct Ball : public Component
 {
   float drag = 0.001f;
   v2 velocity = v2();
-  float speed = 0.0f;
+  float hit_speed = 1.0f;
+  float hit_speed_increment = 1.0f;
 
 
 
@@ -74,11 +75,12 @@ struct Player : public Component
   float mass = 1.0f;
 
   // Smack
-  float radius = 1.0f;
+  float hit_radius = 1.0f;
   float arc_length = 0.25f;
   float hit_power = 100.0f;
   float swing_time = 0.2f;
   float swing_timer = 0.0f;
+  v2 hit_direction = v2();
 
 
   int num_balls_hit_last_frame = 0;

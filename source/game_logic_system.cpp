@@ -18,7 +18,7 @@ struct TempGameData
 
   EntityID ball;
 
-  EntityID walls[6];
+  EntityID walls[8];
 };
 
 
@@ -48,6 +48,8 @@ void init_game_logic_system()
   game_data->walls[3] = create_entity("top right wall");
   game_data->walls[4] = create_entity("bottom right wall");
   game_data->walls[5] = create_entity("bottom wall");
+  game_data->walls[6] = create_entity("middle left wall");
+  game_data->walls[7] = create_entity("middle right wall");
   game_data->ball = create_entity("ball");
   
   v2 player_scale = v2(0.7f, 1.0f);
@@ -60,21 +62,25 @@ void init_game_logic_system()
   Model *model;
   model = (Model *)game_data->players[0].get_component(C_MODEL);
   model->position = v2(-5.0f,  2.0f);
+  model->depth = -0.1f;
   model->scale = player_scale;
   model->color = Color(0.0f, 0.0f, 1.0f, 1.0f);
 
   model = (Model *)game_data->players[1].get_component(C_MODEL);
   model->position = v2(-5.0f, -2.0f);
+  model->depth = -0.1f;
   model->scale = player_scale;
   model->color = Color(0.0f, 1.0f, 1.0f, 1.0f);
 
   model = (Model *)game_data->players[2].get_component(C_MODEL);
   model->position = v2( 5.0f,  2.0f);
+  model->depth = -0.1f;
   model->scale = player_scale;
   model->color = Color(1.0f, 0.0f, 0.0f, 1.0f);
 
   model = (Model *)game_data->players[3].get_component(C_MODEL);
   model->position = v2( 5.0f, -2.0f);
+  model->depth = -0.1f;
   model->scale = player_scale;
   model->color = Color(1.0f, 1.0f, 0.0f, 1.0f);
 
@@ -113,7 +119,7 @@ void init_game_logic_system()
   float h_pos = 5.0f;
 
   v2 horizontal_wall_scale = v2(20.0f, 1.0f);
-  v2 vertical_wall_scale = v2(1.0f, 4.0f);
+  v2 vertical_wall_scale = v2(1.0f, 6.0f);
 
   Color wall_color = Color(0.4f, 0.2f, 0.2f, 1.0f);
 
@@ -123,6 +129,8 @@ void init_game_logic_system()
   game_data->walls[3].add_component(C_MODEL);
   game_data->walls[4].add_component(C_MODEL);
   game_data->walls[5].add_component(C_MODEL);
+  //game_data->walls[6].add_component(C_MODEL);
+  //game_data->walls[7].add_component(C_MODEL);
 
   model = (Model *)game_data->walls[0].get_component(C_MODEL);
   model->position = v2(-x_pos, -v_y_pos);
@@ -154,12 +162,26 @@ void init_game_logic_system()
   model->scale = horizontal_wall_scale;
   model->color = wall_color;
 
+  /*
+  model = (Model *)game_data->walls[6].get_component(C_MODEL);
+  model->position = v2(-2.0f, 0.0f);
+  model->scale = v2(0.2f, 2.0f);
+  model->color = wall_color;
+
+  model = (Model *)game_data->walls[7].get_component(C_MODEL);
+  model->position = v2(2.0f, 0.0f);
+  model->scale = v2(0.2f, 2.0f);
+  model->color = wall_color;
+  */
+
   game_data->walls[0].add_component(C_WALL);
   game_data->walls[1].add_component(C_WALL);
   game_data->walls[2].add_component(C_WALL);
   game_data->walls[3].add_component(C_WALL);
   game_data->walls[4].add_component(C_WALL);
   game_data->walls[5].add_component(C_WALL);
+  //game_data->walls[6].add_component(C_WALL);
+  //game_data->walls[7].add_component(C_WALL);
 
 
   game_data->ball.add_component(C_MODEL);

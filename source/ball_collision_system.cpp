@@ -10,8 +10,9 @@
 
 
 const static int MAX_BALL_COLLISIONS = 128;
+const static float PAD_EPSILON = 0.05f;
 
-static float PAD_EPSILON = 0.05f;
+static bool debug_draw_ball_collisions = false;
 
 struct Line
 {
@@ -152,9 +153,64 @@ static bool line_line_collision(Line a, Line b, float *dist_t, v2 *normal)
   return true;
 }
 
-static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, float ball_radius, BallCollisionInfo *collisions, int *num_collisions)
+static bool circle_circle_collision(Circle a, Circle b)
 {
-  *num_collisions = 0;
+  v2 diff = a.position - b.position;
+  float radius_sum = (a.radius + b.radius) * (a.radius + b.radius);
+  if(length_squared(diff) <= radius_sum) return true;
+  return false;
+}
+
+static bool check_against_player_hits(v2 ball_position, v2 ball_velocity, float ball_radius, float *closest_dist_t, Player **hit_player)
+{
+  ComponentIterator<Player> player_it = get_players_iterator();
+
+  *closest_dist_t = INFINITY;
+  *hit_player = nullptr;
+
+  while(player_it != nullptr)
+  {
+    // Make sure the player's hitting
+    if(!player_it->state == Player::SWINGING) { ++player_it; continue; }
+
+    Model *player_model = (Model *)player_it->parent.get_component(C_MODEL);
+
+    if(debug_draw_ball_collisions) debug_draw_circle(player_model->position, ball_radius + player_it->hit_radius);
+
+    // Check if the ball is right on top of the player
+    if(circle_circle_collision(Circle(ball_position, ball_radius), Circle(player_model->position, player_it->hit_radius)))
+    {
+      *closest_dist_t = 0.0f;
+      *hit_player = &(*player_it);
+      break; // Can break since we know the ghosty ball shouldn't move to a player
+    }
+
+    // Sweep ball travel line against the player's hit
+    Circle ball_player_sum_circle = Circle(player_model->position, ball_radius + player_it->hit_radius);
+    Line travel_line = Line(ball_position, ball_position + ball_velocity);
+
+    // TODO: Also check the swing arc
+
+    float t = 0.0f;
+    v2 n = v2();
+    bool hit = line_circle_collision(travel_line, ball_player_sum_circle, &t, &n);
+    if(hit && t < *closest_dist_t)
+    {
+      *closest_dist_t = t;
+      *hit_player = &(*player_it);
+    }
+
+    ++player_it;
+  }
+
+  if(*hit_player == nullptr) return false;
+  return true;
+}
+
+static bool check_against_walls(v2 ball_position, v2 ball_velocity, float ball_radius, BallCollisionInfo *earliest_collision)
+{
+  bool result = false;
+  earliest_collision->dist_t = 1.0f;
 
   // Go through walls
   ComponentIterator<Wall> wall_it = get_walls_iterator();
@@ -188,8 +244,6 @@ static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, flo
       for(int i = 0; i < 4; i++)
       {
         corners[i] = Circle(rect_points[i], ball_radius);
-
-        //debug_draw_circle(corners[i].position, ball_radius);
       }
       // Edges
       for(int i = 0; i < 4; i++)
@@ -200,6 +254,17 @@ static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, flo
         edges[i] = Line(p0 + n * ball_radius, p1 + n * ball_radius);
       }
     }
+
+    // Debug draw
+    if(debug_draw_ball_collisions)
+    {
+      for(int i = 0; i < 4; i++)
+      {
+        debug_draw_line(edges[i].a, edges[i].b, Color(0.0f, 0.5f, 0.0));
+        debug_draw_circle(corners[i].position, corners[i].radius, Color(0.0f, 0.5f, 0.0));
+      }
+    }
+
 
     // Check the ball's line against the rounded rectangle
     bool hit_anything = false;
@@ -235,21 +300,17 @@ static void check_swept_ball(Ball *ball, v2 ball_position, v2 ball_velocity, flo
     }
 
     // Add the final collision info
-    if(hit_anything)
+    if(hit_anything && closest_dist_t < earliest_collision->dist_t)
     {
-      BallCollisionInfo info;
-      //info.a = ball_collider;
-      //info.b = other_collider;
-      info.dist_t = closest_dist_t;
-      info.normal = closest_normal;
-
-      assert(*num_collisions < MAX_BALL_COLLISIONS);
-      collisions[*num_collisions] = info;
-      (*num_collisions)++;
+      result = true;
+      earliest_collision->dist_t = closest_dist_t;
+      earliest_collision->normal = closest_normal;
     }
 
     ++wall_it;
   }
+
+  return result;
 }
 
 
@@ -275,8 +336,6 @@ void update_ball_collision_system(float time_step)
     Ball *ball = &(*ball_it);
     Model *ball_model = (Model *)ball->parent.get_component(C_MODEL);
 
-    debug_draw_circle(ball_model->position, ball_model->scale.x / 2.0f);
-
     v2 ghost_position = ball_model->position;
     v2 ghost_velocity = ball->velocity * time_step;
     const float ghost_radius = ball_model->scale.x / 2.0f;
@@ -286,62 +345,111 @@ void update_ball_collision_system(float time_step)
     // Resolve until at destination
     while(true)
     {
-      // Sweep circle along travel path and get collision info
-      num_collisions = 0;
-      check_swept_ball(ball, ghost_position, ghost_velocity, ghost_radius, collisions, &num_collisions);
+      if(debug_draw_ball_collisions) debug_draw_circle(ghost_position, ghost_radius);
 
-      debug_draw_line(ghost_position, ghost_position + ghost_velocity);
-      debug_draw_circle(ghost_position, ghost_radius);
+      // Sweep circle to check for collisions against player hits
+      float to_player_hit_t = 0.0f;
+      Player *hit_player = nullptr;
+      bool did_hit_player = check_against_player_hits(ghost_position, ghost_velocity, ghost_radius, &to_player_hit_t, &hit_player);
 
-      // Done if no more collisions will happen
-      if(num_collisions == 0) break;
 
-      // Find the earliest collision
-      BallCollisionInfo *earliest_collision = nullptr;
-      for(int i = 0; i < num_collisions; i++)
+      if(did_hit_player)
       {
-        if(earliest_collision == nullptr || collisions[i].dist_t < earliest_collision->dist_t) earliest_collision = &(collisions[i]);
+        if(debug_draw_ball_collisions) debug_draw_line(ghost_position, ghost_position + ghost_velocity * to_player_hit_t);
+
+        // Move the ball to the player
+        ghost_position += ghost_velocity * to_player_hit_t;
+
+        if(debug_draw_ball_collisions) debug_draw_circle(ghost_position, ghost_radius, Color(1.0f, 1.0f, 0.0f));
+
+        // Set the ball's velocity in the direction of the hit
+        ghost_velocity = hit_player->hit_direction *ball->hit_speed; 
+
+        // Increase the ball's hit speed
+        ball->hit_speed += ball->hit_speed_increment;
+
+        // Stop doing collisions for this frame
+        break;
       }
 
 
 
+      // WALLS
 
-      // Resolve
+      // Sweep circle to check for collision against obstacles
+      BallCollisionInfo wall_collision;
+      bool hit_wall = check_against_walls(ghost_position, ghost_velocity, ghost_radius, &wall_collision);
 
-      v2 vel_to_object = ghost_velocity * earliest_collision->dist_t;
+      // Done if no more collisions will happen
+      if(hit_wall == false)
+      {
+        // Done with wall checks
+
+        if(debug_draw_ball_collisions) debug_draw_line(ghost_position, ghost_position + ghost_velocity);
+
+        // Move the rest of the velocity
+        ghost_position += ghost_velocity;
+
+        // Set up the ghost velocity to the ball's original velocity
+        if(length_squared(ghost_velocity) == 0.0f) ghost_velocity = v2(0.0f, 0.0f);
+        else ghost_velocity = unit(ghost_velocity) * length(ball->velocity);
+
+        break;
+      }
+
+      // Calculate new velocity
+      v2 vel_to_object = ghost_velocity * wall_collision.dist_t;
       vel_to_object -= unit(vel_to_object) * PAD_EPSILON;
-      ghost_position += vel_to_object;
-      ghost_velocity = ghost_velocity * (1.0f - earliest_collision->dist_t);
-      ghost_velocity = reflect(ghost_velocity, earliest_collision->normal);
+      v2 to_object_pos = ghost_position + vel_to_object;
+      v2 vel_after_object = ghost_velocity * (1.0f - wall_collision.dist_t);
 
+
+      // Debug draw
+      if(debug_draw_ball_collisions) debug_draw_line(ghost_position, to_object_pos);
+
+
+      // Update ghost
+      ghost_position += vel_to_object;
+      ghost_velocity = vel_after_object;
+      ghost_velocity = reflect(ghost_velocity, wall_collision.normal);
       static const float STILL_EPSILON = 0.001f;
       if(length(ghost_velocity) <= STILL_EPSILON) ghost_velocity = v2(0.0f, 0.0f);
-
-      debug_draw_line(ghost_position, ghost_position + ghost_velocity);
     }
 
 
+
+    // TODO (2/8/2020): Too braindead to clean up this logic rn...
+    // If debug draw on, only move ball if space is pressed, otherwise always move ball
+
     // Finalize the ball
-    //if(button_toggled_down(0, INPUT_SWING))
+    if(debug_draw_ball_collisions)
     {
-      // Move the rest of the ghost velocity
-      ghost_position += ghost_velocity;
-
+      if(button_toggled_down(0, INPUT_SWING))
+      {
+        ball_model->position = ghost_position;
+        ball->velocity = ghost_velocity;
+        ball->velocity -= ball->velocity * ball->drag * time_step;
+      }
+    }
+    else
+    {
       ball_model->position = ghost_position;
-
-      if(length_squared(ghost_velocity) == 0.0f) ball->velocity = v2(0.0f, 0.0f);
-      else ball->velocity = unit(ghost_velocity) * length(ball->velocity);
+      ball->velocity = ghost_velocity;
       ball->velocity -= ball->velocity * ball->drag * time_step;
     }
 
-    if(ImGui::Button("Blast")) ball->velocity += v2(20.0f, 50.0f);
-
+    if(ImGui::Button("Blast")) ball->velocity += unit(v2(-1.0f, 1.0f)) * 30.0f;
     ++ball_it;
   }
 
+  ImGui::Checkbox("ball collision geometry" , &debug_draw_ball_collisions);
 
 
 
+
+
+
+  // Debug draw to test line line collision etc.
 
 #if 0
   Line a = Line(v2(), v2(2.0f, 2.0f));
@@ -377,10 +485,6 @@ void update_ball_collision_system(float time_step)
   debug_draw_line(b.a, b.b, c);
   debug_draw_circle(circle.position, circle.radius, c);
 #endif
-
-  ImGui::DragFloat("epsilon", &PAD_EPSILON, 0.01f);
-  PAD_EPSILON = clamp(PAD_EPSILON, 0.0f, 1.0f);
-
 }
 
 

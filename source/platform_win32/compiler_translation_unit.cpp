@@ -12,3 +12,9 @@
 #include "renderer.cpp"
 #include "main.cpp"
 
+#include "../../libs/imgui/imgui.cpp"
+#include "../../libs/imgui/imgui_demo.cpp"
+#include "../../libs/imgui/imgui_draw.cpp"
+#include "../../libs/imgui/imgui_impl_dx11.cpp"
+#include "../../libs/imgui/imgui_impl_win32.cpp"
+#include "../../libs/imgui/imgui_widgets.cpp"

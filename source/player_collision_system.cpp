@@ -21,7 +21,7 @@ struct CollisionInfo
   v2 normal;
 };
 
-static const int COLLISION_ITERATIONS = 4;
+static const int COLLISION_ITERATIONS = 8;
 static const int MAX_COLLISIONS = 32;
 
 
