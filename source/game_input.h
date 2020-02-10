@@ -27,3 +27,7 @@ v2 mouse_world_position();
 
 void read_input();
 
+
+// Debugging
+bool key_toggled_down(int button);
+

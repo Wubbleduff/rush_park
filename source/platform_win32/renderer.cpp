@@ -1237,7 +1237,7 @@ void render()
     v4 color = v4(rect.color.r, rect.color.g, rect.color.b, rect.color.a);
     Texture *texture = &(renderer_data->quad_texture);
     bool wireframe = false;
-    if(rect.draw_mode == WIREFRAME) wireframe = true;
+    if(rect.draw_mode == DRAW_WIREFRAME) wireframe = true;
 
     render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, mesh->draw_mode, wireframe);
   }
@@ -1255,7 +1255,7 @@ void render()
     v4 color = v4(circle.color.r, circle.color.g, circle.color.b, circle.color.a);
     Texture *texture = &(renderer_data->quad_texture);
     bool wireframe = false;
-    if(circle.draw_mode == WIREFRAME) wireframe = true;
+    if(circle.draw_mode == DRAW_WIREFRAME) wireframe = true;
 
     render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, mesh->draw_mode, wireframe);
   }

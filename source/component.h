@@ -39,7 +39,7 @@ struct Wall : public Component
 
 struct Ball : public Component
 {
-  float drag = 0.001f;
+  float drag = 0.25f;
   v2 velocity = v2();
   float hit_speed = 1.0f;
   float hit_speed_increment = 1.0f;
@@ -75,19 +75,16 @@ struct Player : public Component
   float mass = 1.0f;
 
   // Smack
-  float hit_radius = 1.0f;
+  float hit_radius = 1.5f;
   float arc_length = 0.25f;
   float hit_power = 100.0f;
   float swing_time = 0.2f;
   float swing_timer = 0.0f;
   v2 hit_direction = v2();
 
-
+  static const int MAX_BALLS_HIT = 4;
   int num_balls_hit_last_frame = 0;
-  static const int MAX_NUM_BALLS_HIT = 4;
-  EntityID balls_hit_last_frame[MAX_NUM_BALLS_HIT];
-
-
+  EntityID balls_hit_last_frame[MAX_BALLS_HIT] = {};
 
   //void destroy();
 };

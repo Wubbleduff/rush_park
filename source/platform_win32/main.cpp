@@ -123,6 +123,12 @@ v2 mouse_world_position()
 }
 
 
+bool key_toggled_down(int key)
+{
+  return (platform_data.prev_key_states[key] == false && platform_data.key_states[key] == true) ? true : false;
+}
+
+
 
 
 

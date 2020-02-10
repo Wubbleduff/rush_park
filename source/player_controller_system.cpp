@@ -4,6 +4,8 @@
 #include "component.h"
 #include "game_input.h"
 
+#include "rendering_system.h"
+
 #include <assert.h>
 
 
@@ -95,7 +97,7 @@ void update_player_controller_system(float time_step)
     if(!player->enabled)       { ++player_it; continue; } 
     if(!player_model->enabled) { ++player_it; continue; } 
 
-    if(i != 0) { ++player_it; ++i; continue; }
+    //if(i != 0) { ++player_it; ++i; continue; }
 
     v2 move_dir = analog_state(0, INPUT_MOVE);
     if(!(move_dir.x == 0.0f && move_dir.y == 0.0f)) move_dir = unit(move_dir);
@@ -125,12 +127,12 @@ void update_player_controller_system(float time_step)
 
       player_model->color = Color(1.0f, 0.0f, 0.0f);
 
-
-      //check_ball_hits(player);
+      debug_draw_circle(player_model->position, player->hit_radius, Color(1.0f, 1.0f, 0.0f, 0.25f), DRAW_FILLED);
     }
     else
     {
       player_model->color = Color(0.0f, 0.0f, 1.0f);
+
       player->num_balls_hit_last_frame = 0;
     }
 
