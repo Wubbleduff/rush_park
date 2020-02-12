@@ -97,7 +97,7 @@ void update_player_controller_system(float time_step)
     if(!player->enabled)       { ++player_it; continue; } 
     if(!player_model->enabled) { ++player_it; continue; } 
 
-    //if(i != 0) { ++player_it; ++i; continue; }
+    if(i != 0) { ++player_it; ++i; continue; }
 
     v2 move_dir = analog_state(0, INPUT_MOVE);
     if(!(move_dir.x == 0.0f && move_dir.y == 0.0f)) move_dir = unit(move_dir);

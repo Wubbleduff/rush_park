@@ -8,6 +8,7 @@ enum ComponentType
   C_COLLIDER,
   C_BALL,
   C_PLAYER,
+  C_GOAL,
 
   NUM_COMPONENTS
 };

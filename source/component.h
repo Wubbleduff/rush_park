@@ -41,8 +41,8 @@ struct Ball : public Component
 {
   float drag = 0.25f;
   v2 velocity = v2();
-  float hit_speed = 1.0f;
-  float hit_speed_increment = 1.0f;
+  float hit_speed = 3.0f;
+  float hit_speed_increment = 2.0f;
 
 
 
@@ -87,6 +87,15 @@ struct Player : public Component
   EntityID balls_hit_last_frame[MAX_BALLS_HIT] = {};
 
   //void destroy();
+};
+
+struct Goal : public Component
+{
+  enum
+  {
+    GREEN,
+    PINK
+  } team;
 };
 
 template<typename T>
@@ -136,6 +145,7 @@ ComponentIterator<Model> get_models_iterator();
 ComponentIterator<Wall> get_walls_iterator();
 ComponentIterator<Ball> get_balls_iterator();
 ComponentIterator<Player> get_players_iterator();
+ComponentIterator<Goal> get_goals_iterator();
 
 
 void init_component_collection();

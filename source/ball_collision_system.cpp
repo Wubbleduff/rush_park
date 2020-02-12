@@ -23,19 +23,13 @@ struct Circle
   Circle(v2 pos, float radius) : position(pos), radius(radius) { }
 };
 
-// For resolution
-struct WallCollisionInfo
-{
-  float dist_t;
-  v2 normal;
-};
-
 struct Ghost
 {
-  v2 new_velocity;
-  v2 new_position;
-  float travel_t; // From the previous ghost
-  bool done;
+  v2 new_velocity = v2();
+  v2 new_position = v2();
+  float travel_t = INFINITY; // From the previous ghost
+  bool done = false;
+  bool goal = false;
 
   Player *hit_player = nullptr;
 };
@@ -141,6 +135,92 @@ static bool circle_circle_collision(Circle a, Circle b)
   return false;
 }
 
+static bool sweep_ball_against_rect(v2 ball_position, v2 ball_velocity, float ball_radius, Rect rect,
+                                    float *out_dist_t, v2 *out_normal)
+{
+  // Create the ball's line
+  Line travel_line = Line(ball_position, ball_position + ball_velocity);
+
+  // Sweep circle against other rectangle
+
+  // Create the corners and edges
+  Circle corners[4];
+  Line edges[4];
+  {
+    v2 rect_pos = rect.position;
+    v2 half_scale = rect.scale / 2.0f;
+
+    v2 rect_points[4];
+    rect_points[0] = rect_pos + v2(-half_scale.x, -half_scale.y); // Bottom left
+    rect_points[1] = rect_pos + v2( half_scale.x, -half_scale.y); // Bottom right
+    rect_points[2] = rect_pos + v2( half_scale.x,  half_scale.y); // Top right
+    rect_points[3] = rect_pos + v2(-half_scale.x,  half_scale.y); // Top left
+
+    // Corners
+    for(int i = 0; i < 4; i++)
+    {
+      corners[i] = Circle(rect_points[i], ball_radius);
+    }
+    // Edges
+    for(int i = 0; i < 4; i++)
+    {
+      v2 p0 = rect_points[i];
+      v2 p1 = rect_points[(i + 1) % 4];
+      v2 n = unit(find_ccw_normal(p1 - p0));
+      edges[i] = Line(p0 + n * ball_radius, p1 + n * ball_radius);
+    }
+  }
+
+  // Debug draw
+  if(debug_draw_ball_collisions)
+  {
+    for(int i = 0; i < 4; i++)
+    {
+      debug_draw_line(edges[i].a, edges[i].b, Color(0.0f, 0.5f, 0.0));
+      debug_draw_circle(corners[i].position, corners[i].radius, Color(0.0f, 0.5f, 0.0));
+    }
+  }
+
+
+  // Check the ball's line against the rounded rectangle
+  bool hit_anything = false;
+  float closest_dist_t = INFINITY;
+  v2 closest_normal;
+
+  // Check against all corners
+  for(int i = 0; i < 4; i++)
+  {
+    float dist;
+    v2 normal;
+    bool hit = line_circle_collision(travel_line, corners[i], &dist, &normal);
+    if(hit && dist < closest_dist_t)
+    {
+      hit_anything = true;
+      closest_dist_t = dist;
+      closest_normal = normal;
+    }
+  }
+
+  // Check against all edges
+  for(int i = 0; i < 4; i++)
+  {
+    float dist;
+    v2 normal;
+    bool hit = line_line_collision(travel_line, edges[i], &dist, &normal);
+    if(hit && dist < closest_dist_t)
+    {
+      hit_anything = true;
+      closest_dist_t = dist;
+      closest_normal = normal;
+    }
+  }
+
+  *out_dist_t = closest_dist_t;
+  *out_normal = closest_normal;
+  if(hit_anything) return true;
+  return false;
+}
+
 static bool ball_hit_player_last_frame(Ball *ball, Player *player)
 {
   for(int i = 0; i < player->num_balls_hit_last_frame; i++)
@@ -208,10 +288,10 @@ static void check_against_player_hits(Ball *ball, v2 ball_position, v2 ball_velo
   }
 }
 
-static bool check_against_walls(v2 ball_position, v2 ball_velocity, float ball_radius, WallCollisionInfo *earliest_collision)
+static bool check_against_walls(v2 ball_position, v2 ball_velocity, float ball_radius, float *out_dist_t, v2 *out_normal)
 {
   bool result = false;
-  earliest_collision->dist_t = 1.0f;
+  *out_dist_t = INFINITY;
 
   // Go through walls
   ComponentIterator<Wall> wall_it = get_walls_iterator();
@@ -220,92 +300,53 @@ static bool check_against_walls(v2 ball_position, v2 ball_velocity, float ball_r
     Wall *wall = &(*wall_it);
     Model *wall_model = (Model *)wall->parent.get_component(C_MODEL);
     
-    // Create the ball's line
-    Line travel_line = Line(ball_position, ball_position + ball_velocity);
+    Rect wall_rect = Rect(wall_model->position, wall_model->scale);
 
-    // Sweep circle against other rectangle
-
-    // Create the corners and edges
-    Circle corners[4];
-    Line edges[4];
-    {
-      v2 rect_pos = wall_model->position;
-      v2 half_scale = wall_model->scale / 2.0f;
-
-      v2 rect_points[4];
-      rect_points[0] = rect_pos + v2(-half_scale.x, -half_scale.y); // Bottom left
-      rect_points[1] = rect_pos + v2( half_scale.x, -half_scale.y); // Bottom right
-      rect_points[2] = rect_pos + v2( half_scale.x,  half_scale.y); // Top right
-      rect_points[3] = rect_pos + v2(-half_scale.x,  half_scale.y); // Top left
-
-      // Corners
-      for(int i = 0; i < 4; i++)
-      {
-        corners[i] = Circle(rect_points[i], ball_radius);
-      }
-      // Edges
-      for(int i = 0; i < 4; i++)
-      {
-        v2 p0 = rect_points[i];
-        v2 p1 = rect_points[(i + 1) % 4];
-        v2 n = unit(find_ccw_normal(p1 - p0));
-        edges[i] = Line(p0 + n * ball_radius, p1 + n * ball_radius);
-      }
-    }
-
-    // Debug draw
-    if(debug_draw_ball_collisions)
-    {
-      for(int i = 0; i < 4; i++)
-      {
-        debug_draw_line(edges[i].a, edges[i].b, Color(0.0f, 0.5f, 0.0));
-        debug_draw_circle(corners[i].position, corners[i].radius, Color(0.0f, 0.5f, 0.0));
-      }
-    }
-
-
-    // Check the ball's line against the rounded rectangle
-    bool hit_anything = false;
-    float closest_dist_t = INFINITY;
-    v2 closest_normal;
-
-    // Check against all corners
-    for(int i = 0; i < 4; i++)
-    {
-      float dist;
-      v2 normal;
-      bool hit = line_circle_collision(travel_line, corners[i], &dist, &normal);
-      if(hit && dist < closest_dist_t)
-      {
-        hit_anything = true;
-        closest_dist_t = dist;
-        closest_normal = normal;
-      }
-    }
-
-    // Check against all edges
-    for(int i = 0; i < 4; i++)
-    {
-      float dist;
-      v2 normal;
-      bool hit = line_line_collision(travel_line, edges[i], &dist, &normal);
-      if(hit && dist < closest_dist_t)
-      {
-        hit_anything = true;
-        closest_dist_t = dist;
-        closest_normal = normal;
-      }
-    }
+    float dist_t;
+    v2 n;
+    bool hit = sweep_ball_against_rect(ball_position, ball_velocity, ball_radius, wall_rect, &dist_t, &n);
 
     // Add the final collision info
-    if(hit_anything && closest_dist_t < earliest_collision->dist_t)
+    if(hit && dist_t < *out_dist_t)
     {
       result = true;
-      earliest_collision->dist_t = closest_dist_t;
-      earliest_collision->normal = closest_normal;
+      *out_dist_t = dist_t;
+      *out_normal = n;
     }
 
     ++wall_it;
+  }
+
+  return result;
+}
+
+static bool check_against_goals(v2 ball_position, v2 ball_velocity, float ball_radius, float *out_dist_t, v2 *out_normal)
+{
+  bool result = false;
+  *out_dist_t = INFINITY;
+
+  // Go through goals
+  ComponentIterator<Goal> goal_it = get_goals_iterator();
+  while(goal_it != nullptr)
+  {
+    Goal *goal = &(*goal_it);
+    Model *goal_model = (Model *)goal->parent.get_component(C_MODEL);
+    
+    Rect goal_rect = Rect(goal_model->position, goal_model->scale);
+
+    float dist_t;
+    v2 n;
+    bool hit = sweep_ball_against_rect(ball_position, ball_velocity, ball_radius, goal_rect, &dist_t, &n);
+
+    // Add the final collision info
+    if(hit && dist_t < *out_dist_t)
+    {
+      result = true;
+      *out_dist_t = dist_t;
+      *out_normal = n;
+    }
+
+    ++goal_it;
   }
 
   return result;
@@ -346,6 +387,26 @@ void update_ball_collision_system(float time_step)
     // Resolve until at destination
     while(true)
     {
+      // No collision ghost
+      {
+        Ghost no_collision_ghost;
+
+        // Move the rest of the velocity
+        no_collision_ghost.new_position = latest_ghost.new_position + latest_ghost.new_velocity;
+
+        // Set up the ghost.new_velocity to the ball's original velocity
+        if(length_squared(latest_ghost.new_velocity) == 0.0f) no_collision_ghost.new_velocity = v2(0.0f, 0.0f);
+        else no_collision_ghost.new_velocity = unit(latest_ghost.new_velocity) * length(original_ghost_velocity);
+
+        static const float STILL_EPSILON = 0.0001f;
+        if(length(no_collision_ghost.new_velocity) <= STILL_EPSILON) no_collision_ghost.new_velocity = v2(0.0f, 0.0f);
+
+        no_collision_ghost.travel_t = 1.0f;
+        no_collision_ghost.done = true;
+
+        add_ghost(&no_collision_ghost);
+      }
+
       // Players
       {
         Ghost player_collision_ghost;
@@ -371,44 +432,47 @@ void update_ball_collision_system(float time_step)
 
       // Walls
       {
-        Ghost wall_collision_ghost = {};
+        Ghost wall_collision_ghost;
 
         // Sweep circle to check for collision against obstacles
-        WallCollisionInfo wall_collision = {};
-        bool hit_wall = check_against_walls(latest_ghost.new_position, latest_ghost.new_velocity, ghost_radius, &wall_collision);
-        if(hit_wall == false)
-        {
-          // Done with wall checks
-
-          // Move the rest of the velocity
-          wall_collision_ghost.new_position = latest_ghost.new_position + latest_ghost.new_velocity;
-
-          // Set up the ghost.new_velocity to the ball's original velocity
-          if(length_squared(latest_ghost.new_velocity) == 0.0f) wall_collision_ghost.new_velocity = v2(0.0f, 0.0f);
-          else wall_collision_ghost.new_velocity = unit(latest_ghost.new_velocity) * length(original_ghost_velocity);
-
-          static const float STILL_EPSILON = 0.0001f;
-          if(length(wall_collision_ghost.new_velocity) <= STILL_EPSILON) wall_collision_ghost.new_velocity = v2(0.0f, 0.0f);
-
-          wall_collision_ghost.travel_t = 1.0f;
-          wall_collision_ghost.done = true;
-        }
-        else
+        float dist_t;
+        v2 normal;
+        bool hit_wall = check_against_walls(latest_ghost.new_position, latest_ghost.new_velocity, ghost_radius, &dist_t, &normal);
+        if(hit_wall)
         {
           // Calculate new velocity
-          v2 vel_to_object = latest_ghost.new_velocity * wall_collision.dist_t;
+          v2 vel_to_object = latest_ghost.new_velocity * dist_t;
           vel_to_object -= unit(vel_to_object) * PAD_EPSILON;
           v2 to_object_pos = latest_ghost.new_position + vel_to_object;
-          v2 vel_after_object = latest_ghost.new_velocity * (1.0f - wall_collision.dist_t);
-          vel_after_object = reflect(vel_after_object, wall_collision.normal);
+          v2 vel_after_object = latest_ghost.new_velocity * (1.0f - dist_t);
+          vel_after_object = reflect(vel_after_object, normal);
 
           // Update ghost
           wall_collision_ghost.new_velocity = vel_after_object;
           wall_collision_ghost.new_position = to_object_pos;
-          wall_collision_ghost.travel_t = wall_collision.dist_t;
-        }
+          wall_collision_ghost.travel_t = dist_t;
 
-        add_ghost(&wall_collision_ghost);
+          add_ghost(&wall_collision_ghost);
+        }
+      }
+
+      // Goals
+      {
+        Ghost goal_collision_ghost;
+
+        float dist_t;
+        v2 normal;
+        bool hit_goal = check_against_goals(latest_ghost.new_position, latest_ghost.new_velocity, ghost_radius, &dist_t, &normal);
+        if(hit_goal)
+        {
+          goal_collision_ghost.new_velocity = v2();
+          goal_collision_ghost.new_position = latest_ghost.new_velocity * dist_t;
+          goal_collision_ghost.travel_t = dist_t;
+          goal_collision_ghost.done = true;
+          goal_collision_ghost.goal = true;
+
+          add_ghost(&goal_collision_ghost);
+        }
       }
 
       // Pick the closest ghost
@@ -431,7 +495,6 @@ void update_ball_collision_system(float time_step)
 
       // Update the latest ghost
       latest_ghost = closest_ghost;
-
 
       num_ghost_collisions = 0;
 
@@ -462,6 +525,12 @@ void update_ball_collision_system(float time_step)
         ball->velocity = latest_ghost.new_velocity * (1.0f / time_step);
         v2 drag_vector = -ball->velocity * ball->drag * time_step;
         if(dot(ball->velocity, ball->velocity + drag_vector) > 0.0f) ball->velocity += drag_vector;
+
+        if(latest_ghost.goal)
+        {
+          ball->velocity = v2();
+          ball_model->position = v2();
+        }
       }
     }
     else
@@ -480,6 +549,12 @@ void update_ball_collision_system(float time_step)
       ball->velocity = latest_ghost.new_velocity * (1.0f / time_step);
       v2 drag_vector = -ball->velocity * ball->drag * time_step;
       if(dot(ball->velocity, ball->velocity + drag_vector) > 0.0f) ball->velocity += drag_vector;
+
+      if(latest_ghost.goal)
+      {
+        ball->velocity = v2();
+        ball_model->position = v2();
+      }
     }
 
     if(ImGui::Button("Blast")) ball->velocity += unit(v2(-1.0f, 1.0f)) * 100.0f;

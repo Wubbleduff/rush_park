@@ -117,7 +117,7 @@ static Ball *create_ball_component(EntityID parent)
 {
   Ball ball = {};
 
-  ball.component_type = C_MODEL;
+  ball.component_type = C_BALL;
   ball.enabled = true;
   ball.parent = parent;
 
@@ -129,12 +129,24 @@ static Player *create_player_component(EntityID parent)
 {
   Player player = {};
 
-  player.component_type = C_MODEL;
+  player.component_type = C_PLAYER;
   player.enabled = true;
   player.parent = parent;
 
   ComponentPool<Player> *pool = (ComponentPool<Player> *)component_collection->pools[C_PLAYER];
   return pool->add(&player);
+}
+
+static Goal *create_goal_component(EntityID parent)
+{
+  Goal goal = {};
+
+  goal.component_type = C_GOAL;
+  goal.enabled = true;
+  goal.parent = parent;
+
+  ComponentPool<Goal> *pool = (ComponentPool<Goal> *)component_collection->pools[C_GOAL];
+  return pool->add(&goal);
 }
 
 Component *create_component(EntityID parent, ComponentType type)
@@ -145,6 +157,7 @@ Component *create_component(EntityID parent, ComponentType type)
     case C_WALL:     return create_wall_component(parent);
     case C_BALL:     return create_ball_component(parent);
     case C_PLAYER:   return create_player_component(parent);
+    case C_GOAL:     return create_goal_component(parent);
 
     default: { assert(0); return nullptr; }
   }
@@ -177,6 +190,12 @@ ComponentIterator<Player> get_players_iterator()
   ComponentPool<Player> *pool = (ComponentPool<Player> *)component_collection->pools[C_PLAYER];
   if(pool->count == 0) return ComponentIterator<Player>(nullptr, 0);
   return ComponentIterator<Player>(pool->components, pool->count);
+}
+ComponentIterator<Goal> get_goals_iterator()
+{
+  ComponentPool<Goal> *pool = (ComponentPool<Goal> *)component_collection->pools[C_GOAL];
+  if(pool->count == 0) return ComponentIterator<Goal>(nullptr, 0);
+  return ComponentIterator<Goal>(pool->components, pool->count);
 }
 
 
@@ -211,5 +230,12 @@ void init_component_collection()
   component_collection->pools[C_PLAYER] = player_pool;
   player_pool->components = new Player[player_pool->capacity];
   player_pool->components_to_remove = new Player[player_pool->capacity];
+
+
+
+  ComponentPool<Goal> *goal_pool = new ComponentPool<Goal>();
+  component_collection->pools[C_GOAL] = goal_pool;
+  goal_pool->components = new Goal[goal_pool->capacity];
+  goal_pool->components_to_remove = new Goal[goal_pool->capacity];
 }
 
