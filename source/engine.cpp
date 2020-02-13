@@ -4,11 +4,8 @@
 #include "platform.h"
 #include "game_input.h"
 
-#include "entity.h"
-#include "component.h"
-
 // Game engine systems
-#include "game_logic_system.h"
+#include "game_state_system.h"
 #include "rendering_system.h"
 #include "player_collision_system.h"
 #include "player_controller_system.h"
@@ -58,11 +55,10 @@ void start_engine()
 
   init_platform();
 
-  init_entities();
   init_component_collection();
 
   // Init game engine systems
-  init_game_logic_system();
+  init_game_state_system();
 
 
 
@@ -83,26 +79,31 @@ void start_engine()
     static float engine_counter = 0.0f;
     engine_counter += dt;
 
+
+    static bool simulating_game = true;
+
+
     static const int MAX_UPDATES = 5;
     while(engine_counter >= TIME_STEP && update_counter <= MAX_UPDATES)
     {
       start_profile_timer();
-      
       start_frame();
-
       show_profiling();
 
 
-      // Process new game state using input
-      update_game_logic_system(TIME_STEP);
-      update_player_collision_system(TIME_STEP);
-      update_player_controller_system(TIME_STEP);
-      update_ball_collision_system(TIME_STEP);
+
+      bool restarting_game = should_restart_game();
+      bool simulate_game = should_simulate_game();
+
+      if(restarting_game) reset_game_state();
+
+      if(simulate_game) update_player_collision_system(TIME_STEP);
+      if(simulate_game) update_player_controller_system(TIME_STEP);
+      if(simulate_game) update_ball_collision_system(TIME_STEP);
 
 
 
 
-      // Present the game
       render();
 
       read_input();

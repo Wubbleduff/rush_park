@@ -32,7 +32,5 @@ struct EntityID
 
 
 EntityID create_entity(const char *name);
-void destroy_entity(EntityID entity);
-
-void init_entities();
+void destroy(EntityID entity);
 

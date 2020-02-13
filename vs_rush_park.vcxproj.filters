@@ -39,13 +39,7 @@
     <ClCompile Include="source\platform_win32\compiler_translation_unit.cpp">
       <Filter>Source Files\platform_win32</Filter>
     </ClCompile>
-    <ClCompile Include="source\entity.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\component.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\game_logic_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\player_collision_system.cpp">
@@ -74,6 +68,9 @@
     </ClCompile>
     <ClCompile Include="libs\imgui\imgui_widgets.cpp">
       <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game_state_system.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -358,9 +355,6 @@
     <ClInclude Include="source\component.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="source\game_logic_system.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\player_collision_system.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -396,6 +390,9 @@
     </ClInclude>
     <ClInclude Include="libs\imgui\imstb_truetype.h">
       <Filter>Source Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game_state_system.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
