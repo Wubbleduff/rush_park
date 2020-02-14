@@ -165,6 +165,17 @@ Component *create_component(EntityID parent, ComponentType type)
 
 void destroy_component(Component *component)
 {
+  component->parent = EntityID(-1);
+  component->enabled = false;
+
+  switch(component->component_type)
+  {
+    case C_MODEL:  { (ComponentPool<Model> *)component_collection->pools[C_MODEL]->count--; break; }
+    case C_WALL:   { (ComponentPool<Wall> *)component_collection->pools[C_WALL]->count--; break; }
+    case C_BALL:   { (ComponentPool<Ball> *)component_collection->pools[C_BALL]->count--; break; }
+    case C_PLAYER: { (ComponentPool<Player> *)component_collection->pools[C_PLAYER]->count--; break; }
+    case C_GOAL:   { (ComponentPool<Goal> *)component_collection->pools[C_GOAL]->count--; break; }
+  }
 }
 
 ComponentIterator<Model> get_models_iterator()

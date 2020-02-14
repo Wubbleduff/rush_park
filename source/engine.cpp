@@ -92,14 +92,21 @@ void start_engine()
 
 
 
-      bool restarting_game = should_restart_game();
-      bool simulate_game = should_simulate_game();
+      if(should_restart_game())
+      {
+        reset_game_state();
+      }
 
-      if(restarting_game) reset_game_state();
+      if(key_toggled_down('R'))
+      {
+        restart_game();
+      }
 
-      if(simulate_game) update_player_collision_system(TIME_STEP);
-      if(simulate_game) update_player_controller_system(TIME_STEP);
-      if(simulate_game) update_ball_collision_system(TIME_STEP);
+      if(should_simulate_game()) update_player_collision_system(TIME_STEP);
+      if(should_simulate_game()) update_player_controller_system(TIME_STEP);
+      if(should_simulate_game()) update_ball_collision_system(TIME_STEP);
+
+
 
 
 

@@ -18,6 +18,7 @@ struct EntityID
   Component *add_component(ComponentType type);
   void remove_component(ComponentType type);
   Component *get_component(ComponentType type) const;
+  void defer_destroy();
 
   Model *get_model() const;
   Wall *get_wall() const;

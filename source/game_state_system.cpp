@@ -17,18 +17,25 @@
 
 struct Entity
 {
-  const char *name;
+  const char *name = "";
+  EntityID id = EntityID(0);
 
   Component *components[NUM_COMPONENTS];
 
-  bool destroyed = false;
+  bool alive = false;
+  bool will_die = false;
 };
 
-static const int MAX_ENTITIES = 1024;
+
 struct EntityPool
 {
+  static const int MAX_ENTITIES = 1024;
+
   int num_entities;
   Entity *entities;
+
+  int num_entities_to_destroy;
+  Entity **entities_to_destroy;
 };
 
 struct GameState
@@ -90,21 +97,26 @@ bool EntityID::operator==(const EntityID &other) const { return id == other.id; 
 
 EntityID create_entity(const char *name)
 {
-  if(game_state->entity_pool->num_entities >= MAX_ENTITIES) assert(0);
+  if(game_state->entity_pool->num_entities >= EntityPool::MAX_ENTITIES) assert(0);
 
   Entity entity;
 
   entity.name = name;
   for(int i = 0; i < NUM_COMPONENTS; i++) entity.components[i] = nullptr;
 
+  entity.id = EntityID(game_state->entity_pool->num_entities);
+
+  entity.alive = true;
+  entity.will_die = false;
+
   game_state->entity_pool->entities[game_state->entity_pool->num_entities] = entity;
   game_state->entity_pool->num_entities++;
-  return EntityID(game_state->entity_pool->num_entities - 1);
+  return entity.id;
 }
 
-void destroy(EntityID entity)
+void EntityID::defer_destroy()
 {
-  game_state->entity_pool->entities[entity.id].destroyed = true;
+  game_state->entity_pool->entities[id].will_die = true;
 }
 
 
@@ -113,11 +125,31 @@ void destroy(EntityID entity)
 
 
 
-
-
-void destroy_all_entities()
+static void destroy_entity(Entity *entity)
 {
-  //for(int i = 0; i < game_state->game_state->entity_pool->num_entities; i++) destroy(game_state->game_state->entity_pool->entities);
+  entity->alive = false;
+  entity->will_die = false;
+  entity->name = "";
+  entity->id = EntityID(0);
+
+  for(int i = 0; i < NUM_COMPONENTS; i++)
+  {
+    if(entity->components[i] == nullptr) continue;
+    destroy_component(entity->components[i]);
+    entity->components[i] = nullptr;
+  }
+}
+
+static void reset_all_entities()
+{
+  for(int i = 0; i < EntityPool::MAX_ENTITIES; i++)
+  {
+    if(game_state->entity_pool->entities[i].alive == false) continue;
+    destroy_entity(&(game_state->entity_pool->entities[i]));
+  }
+
+  game_state->entity_pool->num_entities = 0;
+  game_state->entity_pool->num_entities_to_destroy = 0;
 }
 
 void create_initial_entities()
@@ -128,15 +160,13 @@ void create_initial_entities()
   players[2] = create_entity("player 3");
   players[3] = create_entity("player 4");
 
-  EntityID walls[4];
+  EntityID walls[6];
   walls[0] = create_entity("bottom left wall");
   walls[1] = create_entity("top left wall");
   walls[2] = create_entity("top wall");
   walls[3] = create_entity("top right wall");
   walls[4] = create_entity("bottom right wall");
   walls[5] = create_entity("bottom wall");
-  walls[6] = create_entity("middle left wall");
-  walls[7] = create_entity("middle right wall");
 
   EntityID goals[2];
   goals[0] = create_entity("left goal");
@@ -290,17 +320,6 @@ void create_initial_entities()
 }
 
 
-void reset_game_state()
-{
-  destroy_all_entities();
-
-  create_initial_entities();
-
-  game_state->restarting_game = false;
-  game_state->simulate_game = true;
-}
-
-
 void restart_game()
 {
   game_state->restarting_game = true;
@@ -318,13 +337,27 @@ bool should_simulate_game()
   return game_state->simulate_game;
 }
 
+void reset_game_state()
+{
+  reset_all_entities();
+
+  create_initial_entities();
+
+  game_state->restarting_game = false;
+  game_state->simulate_game = true;
+}
+
 void init_game_state_system()
 {
   game_state = (GameState *)malloc(sizeof(GameState));
 
   game_state->entity_pool = (EntityPool *)malloc(sizeof(EntityPool));
   game_state->entity_pool->num_entities = 0;
-  game_state->entity_pool->entities = (Entity *)malloc(sizeof(Entity) * MAX_ENTITIES);
+  game_state->entity_pool->entities = (Entity *)malloc(sizeof(Entity) * EntityPool::MAX_ENTITIES);
+  game_state->entity_pool->num_entities_to_destroy = 0;
+  game_state->entity_pool->entities_to_destroy = (Entity **)malloc(sizeof(Entity *) * EntityPool::MAX_ENTITIES);
+
+  for(int i = 0; i < EntityPool::MAX_ENTITIES; i++) game_state->entity_pool->entities[i] = Entity();
 
   game_state->restarting_game = true;
   game_state->simulate_game = false;

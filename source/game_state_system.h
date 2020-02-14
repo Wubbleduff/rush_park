@@ -1,6 +1,8 @@
 
 #pragma once
 
+void restart_game();
+
 bool should_restart_game();
 bool should_simulate_game();
 
