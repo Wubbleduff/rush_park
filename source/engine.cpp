@@ -99,7 +99,7 @@ void start_engine()
 
       if(key_toggled_down('R'))
       {
-        restart_game();
+        set_game_to_restart();
       }
 
       if(should_simulate_game()) update_player_collision_system(TIME_STEP);

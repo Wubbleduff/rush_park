@@ -2,16 +2,13 @@
 // Interface
 #include "game_state_system.h"
 #include "entity.h"
-#include "component.h"
 
 // Needed components
 #include "entity.h"
 #include "component.h"
 
 // Utilities
-#include "game_input.h"
 #include "my_math.h"
-#include "imgui.h"
 #include <stdlib.h> // malloc
 #include <assert.h>
 
@@ -42,7 +39,7 @@ struct GameState
 {
   EntityPool *entity_pool;
 
-  bool restarting_game;
+  bool will_restart_game;
   bool simulate_game;
 };
 
@@ -320,16 +317,16 @@ void create_initial_entities()
 }
 
 
-void restart_game()
+void set_game_to_restart()
 {
-  game_state->restarting_game = true;
+  game_state->will_restart_game = true;
   game_state->simulate_game = false;
 }
 
 
 bool should_restart_game()
 {
-  return game_state->restarting_game;
+  return game_state->will_restart_game;
 }
 
 bool should_simulate_game()
@@ -343,7 +340,7 @@ void reset_game_state()
 
   create_initial_entities();
 
-  game_state->restarting_game = false;
+  game_state->will_restart_game = false;
   game_state->simulate_game = true;
 }
 
@@ -359,7 +356,7 @@ void init_game_state_system()
 
   for(int i = 0; i < EntityPool::MAX_ENTITIES; i++) game_state->entity_pool->entities[i] = Entity();
 
-  game_state->restarting_game = true;
+  game_state->will_restart_game = true;
   game_state->simulate_game = false;
 }
 
