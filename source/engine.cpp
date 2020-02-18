@@ -10,6 +10,7 @@
 #include "player_collision_system.h"
 #include "player_controller_system.h"
 #include "ball_collision_system.h"
+#include "networking_system.h"
 
 #include "imgui.h" // For displaying dt
 #include <stdio.h> // sprintf
@@ -108,6 +109,8 @@ void start_engine()
 
 
 
+
+      distribute_game_state();
 
 
 

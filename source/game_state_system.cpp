@@ -24,6 +24,7 @@ struct Entity
 };
 
 
+
 struct EntityPool
 {
   static const int MAX_ENTITIES = 1024;
@@ -342,6 +343,38 @@ void reset_game_state()
 
   game_state->will_restart_game = false;
   game_state->simulate_game = true;
+}
+
+static void serialize_entity(Entity *entity, void *stream, int *bytes_written)
+{
+  /*
+  SerializedEntityHeader header;
+  header.id = entity->id;
+
+  // Count components
+  
+  header.num_components = num_components;
+
+  */
+}
+
+void serialize_game_state(void **out_stream, int *out_bytes)
+{
+  /*
+  int num_entities = game_state->entity_pool->num_entities;
+  int bytes = num_entities * sizeof(SerializedEntity);
+  char *stream = (char *)malloc(bytes);
+
+  foreach(Entity entity in entities)
+  {
+    int bytes_written;
+    serialize_entity(&entity, stream, &bytes_written);
+    stream += bytes_written;
+  }
+
+  *out_stream = stream;
+  *out_bytes = bytes;
+  */
 }
 
 void init_game_state_system()

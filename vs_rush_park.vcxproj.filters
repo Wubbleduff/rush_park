@@ -72,6 +72,9 @@
     <ClCompile Include="source\game_state_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\networking_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="libs\dx\include\D3DX10math.inl">
@@ -392,6 +395,9 @@
       <Filter>Source Files\imgui</Filter>
     </ClInclude>
     <ClInclude Include="source\game_state_system.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\networking_system.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
