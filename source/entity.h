@@ -10,6 +10,7 @@ struct Model;
 struct Wall;
 struct Ball;
 struct Player;
+struct Goal;
 
 struct EntityID
 {
@@ -24,6 +25,7 @@ struct EntityID
   Wall *get_wall() const;
   Ball *get_ball() const;
   Player *get_player() const;
+  Goal *get_goal() const;
 
   bool EntityID::operator==(const EntityID &other) const;
 

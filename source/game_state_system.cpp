@@ -17,10 +17,26 @@ struct Entity
   const char *name = "";
   EntityID id = EntityID(0);
 
+  bool alive = false;
+  bool will_die = false;
+
   Component *components[NUM_COMPONENTS];
+};
+
+struct SerializedEntity
+{
+  EntityID id = EntityID(0);
 
   bool alive = false;
   bool will_die = false;
+
+  unsigned active_components = 0;
+
+  Model model;
+  Wall wall;
+  Ball ball;
+  Player player;
+  Goal goal;
 };
 
 
@@ -89,6 +105,11 @@ Wall *EntityID::get_wall() const
 Player *EntityID::get_player() const
 {
   return (Player *)game_state->entity_pool->entities[id].components[C_PLAYER];
+}
+
+Goal *EntityID::get_goal() const
+{
+  return (Goal *)game_state->entity_pool->entities[id].components[C_GOAL];
 }
 
 bool EntityID::operator==(const EntityID &other) const { return id == other.id; }
@@ -347,34 +368,69 @@ void reset_game_state()
 
 static void serialize_entity(Entity *entity, void *stream, int *bytes_written)
 {
-  /*
-  SerializedEntityHeader header;
-  header.id = entity->id;
+  SerializedEntity s;
 
-  // Count components
-  
-  header.num_components = num_components;
+  s.id = entity->id;
+  s.alive = entity->alive;
+  s.will_die = entity->will_die;
 
-  */
+  s.active_components = 0;
+
+  if(entity->id.get_model())
+  {
+    s.model = *(entity->id.get_model());
+    s.active_components |= (1 << C_MODEL);
+  }
+  if(entity->id.get_wall())
+  {
+    s.wall = *(entity->id.get_wall());
+    s.active_components |= (1 << C_WALL);
+  }
+  if(entity->id.get_ball())
+  {
+    s.ball = *(entity->id.get_ball());
+    s.active_components |= (1 << C_BALL);
+  }
+  if(entity->id.get_player())
+  {
+    s.player = *(entity->id.get_player());
+    s.active_components |= (1 << C_PLAYER);
+  }
+  if(entity->id.get_goal())
+  {
+    s.goal = *(entity->id.get_goal());
+    s.active_components |= (1 << C_GOAL);
+  }
+
+  *(SerializedEntity *)stream = s;
+  *bytes_written = sizeof(SerializedEntity);
 }
 
 void serialize_game_state(void **out_stream, int *out_bytes)
 {
-  /*
-  int num_entities = game_state->entity_pool->num_entities;
-  int bytes = num_entities * sizeof(SerializedEntity);
+  int entities_left = game_state->entity_pool->num_entities;
+  int bytes = entities_left * sizeof(SerializedEntity);
   char *stream = (char *)malloc(bytes);
+  void *start_of_stream = stream;
 
-  foreach(Entity entity in entities)
+  int index = 0;
+  while(entities_left > 0)
   {
+
+    while(game_state->entity_pool->entities[index].alive == false) index++;
+
+    Entity *entity = &(game_state->entity_pool->entities[index]);
+
     int bytes_written;
-    serialize_entity(&entity, stream, &bytes_written);
+    serialize_entity(entity, stream, &bytes_written);
     stream += bytes_written;
+
+    entities_left--;
+    index++;
   }
 
-  *out_stream = stream;
+  *out_stream = start_of_stream;
   *out_bytes = bytes;
-  */
 }
 
 void init_game_state_system()
