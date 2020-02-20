@@ -72,8 +72,8 @@
     <ClCompile Include="source\game_state_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\networking_system.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="source\platform_win32\networking_system.cpp">
+      <Filter>Source Files\platform_win32</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,7 +1,7 @@
 
-#include "networking_system.h"
+#include "../networking_system.h"
 
-#include "game_state_system.h"
+#include "../game_state_system.h"
 
 #include <stdio.h>
 
@@ -47,26 +47,9 @@ static int get_last_error()
 #endif
 }
 
-static void init_winsock()
-{
-#ifdef WIN32
-  int error;
 
-  // Initialize Winsock
-  WSADATA wsa_data;
-  error = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-  if(error) fprintf(stderr, "Error loading networking module: %i\n", get_last_error());
-#endif
-}
 
-static void cleanup_winsock()
-{
-#ifdef WIN32
-  // Shut down Winsock
-  int error = WSACleanup();
-  if(error == -1) fprintf(stderr, "Error unloading networking module: %i\n", get_last_error());
-#endif
-}
+
 
 class StreamConnection
 {
@@ -75,6 +58,12 @@ public:
   {
     tcp_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if(tcp_socket == -1) fprintf(stderr, "Error opening socket: %i\n", get_last_error());
+  }
+
+  void assign_socket(SOCKET in_socket, sockaddr_in *in_address)
+  {
+    tcp_socket = in_socket;
+    other_address = *in_address;
   }
 
   void make_nonblocking()
@@ -109,6 +98,8 @@ public:
 
       if(status == CODE_INVALID) { error = CODE_INVALID; break; }
     }
+
+    other_address = address;
 
     return error;
   }
@@ -156,7 +147,7 @@ public:
     if(error != 0) fprintf(stderr, "Error shutting down: %i\n", get_last_error());
   }
 
-  void close_connection()
+  void close_socket()
   {
     // Close the socket
 #ifdef WIN32
@@ -171,18 +162,90 @@ public:
 
 private:
   SOCKET tcp_socket;
+  sockaddr_in other_address;
 };
 
 
 struct NetworkData
 {
-  StreamConnection client_connection;
+  SOCKET listening_socket;
+
+  static const int MAX_CLIENTS = 4;
+  int num_client_connections = 0;
+  StreamConnection client_connections[MAX_CLIENTS];
 };
 
 static NetworkData *network_data;
 
 
 
+
+
+
+static void init_winsock()
+{
+#ifdef WIN32
+  int error;
+
+  // Initialize Winsock
+  WSADATA wsa_data;
+  error = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  if(error) fprintf(stderr, "Error loading networking module: %i\n", get_last_error());
+#endif
+}
+
+static void cleanup_winsock()
+{
+#ifdef WIN32
+  // Shut down Winsock
+  int error = WSACleanup();
+  if(error == -1) fprintf(stderr, "Error unloading networking module: %i\n", get_last_error());
+#endif
+}
+
+
+static void make_listening_socket()
+{
+  // Create a listening socket
+  SOCKET listening_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if(listening_socket == INVALID_SOCKET)
+  {
+    fprintf(stderr, "Couldn't create listening socket: %d\n", get_last_error());
+  }
+
+  unsigned long mode = 1;
+  int error = ioctlsocket(listening_socket, FIONBIO, &mode);
+  if(error != 0)  fprintf(stderr, "Error opening socket: %i\n", get_last_error());
+
+  sockaddr_in bound_address;
+  bound_address.sin_family = AF_INET;
+  bound_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+  bound_address.sin_port = htons(2000);
+
+  error = bind(listening_socket, (SOCKADDR *)(&bound_address), sizeof(bound_address));
+  if(error == SOCKET_ERROR)
+  {
+    error = get_last_error();
+    fprintf(stderr, "Couldn't bind listening socket: %d\n", error);
+  }
+
+  error = listen(listening_socket, SOMAXCONN);
+  if(error == SOCKET_ERROR)
+  {
+    fprintf(stderr, "Couldn't listen on the created socket: %d\n", get_last_error());
+  }
+
+  network_data->listening_socket = listening_socket;
+}
+
+static void send_stream_to_clients(void *stream, int bytes)
+{
+  for(int i = 0; i < network_data->num_client_connections; i++)
+  {
+    StreamConnection *client = &(network_data->client_connections[i]);
+    client->send_data(stream, bytes);
+  }
+}
 
 
 
@@ -219,20 +282,45 @@ void distribute_game_state()
   serialize_game_state(&stream, &bytes);
   
   // Send to client
-  //send_stream_to_client(stream, bytes);
+  send_stream_to_clients(stream, bytes);
 
 
   free(stream);
 }
 
+void accept_client_connections()
+{
+  int error = 0;
+  do
+  {
+    if(network_data->num_client_connections >= NetworkData::MAX_CLIENTS) return;
 
-void init_network_server(int port)
+    sockaddr_in client_address;
+    int client_address_size = sizeof(sockaddr_in);
+    SOCKET incoming_socket = accept(network_data->listening_socket, (sockaddr *)(&client_address), &client_address_size);
+    if(incoming_socket == INVALID_SOCKET)
+    {
+      error = get_last_error();
+      if(error != CODE_WOULD_BLOCK) fprintf(stderr, "Error on accepting socket: %d\n", get_last_error());
+      continue;
+    }
+
+    // Valid socket
+    StreamConnection *new_connection = &(network_data->client_connections[network_data->num_client_connections]);
+    network_data->num_client_connections++;
+    new_connection->assign_socket(incoming_socket, &client_address);
+
+  } while(error != CODE_WOULD_BLOCK);
+}
+
+void init_network_system()
 {
   init_winsock();
 
   network_data = (NetworkData *)malloc(sizeof(NetworkData));
+  network_data->num_client_connections = 0;
 
-  StreamConnection *connection = &(network_data->client_connection);
+  make_listening_socket();
 }
 
 void shutdown_network_client()

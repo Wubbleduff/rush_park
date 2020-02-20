@@ -112,12 +112,12 @@
     <ClCompile Include="source\component.cpp" />
     <ClCompile Include="source\engine.cpp" />
     <ClCompile Include="source\game_state_system.cpp" />
-    <ClCompile Include="source\networking_system.cpp" />
     <ClCompile Include="source\platform_win32\compiler_translation_unit.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="source\platform_win32\input.cpp" />
     <ClCompile Include="source\platform_win32\main.cpp" />
+    <ClCompile Include="source\platform_win32\networking_system.cpp" />
     <ClCompile Include="source\platform_win32\renderer.cpp" />
     <ClCompile Include="source\player_collision_system.cpp" />
     <ClCompile Include="source\player_controller_system.cpp" />
