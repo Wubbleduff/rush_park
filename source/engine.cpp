@@ -126,6 +126,8 @@ void start_engine()
       EngineMode engine_mode = engine_data->mode;
       if(engine_mode == MENU)
       {
+        start_frame();
+        render();
       }
       else if(engine_mode == LOCAL_GAME)
       {
@@ -177,7 +179,7 @@ void start_engine()
         engine_data->update_time_sum += time_passed;
         engine_data->update_time_counter++;
       }
-      else if(engine_mode = SERVER_GAME)
+      else if(engine_mode == SERVER_GAME)
       {
         // Simulate the game systems
         simulate_game(TIME_STEP);
