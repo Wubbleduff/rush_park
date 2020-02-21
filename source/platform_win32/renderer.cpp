@@ -809,7 +809,7 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
   device_context->RSSetState(raster_state);
 
   // Setup the viewport for rendering.
-  set_viewport(framebuffer_width, framebuffer_height, v2());
+  set_viewport((float)framebuffer_width, (float)framebuffer_height, v2());
 
   aspect_ratio = (float)framebuffer_width / (float)framebuffer_height;
 
@@ -1068,7 +1068,7 @@ void init_renderer(HWND window_handle, unsigned in_framebuffer_width, unsigned i
       for(int x = 0; x < RADIUS_PIXELS * 2; x++)
       {
         v2 center = v2(RADIUS_PIXELS, RADIUS_PIXELS);
-        v2 curr = v2(x, y);
+        v2 curr = v2((float)x, (float)y);
 
         if(length_squared(center - curr) < RADIUS_PIXELS * RADIUS_PIXELS) texture[y][x] = 0xFFFFFFFF;
         else texture[y][x] = 0;

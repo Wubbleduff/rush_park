@@ -10,7 +10,7 @@ static const float PI = 3.14159265f;
 
 static float squared(float a) { return a * a; }
 
-#if 1
+#if 0
 static int min(int a, int b) { return (a < b) ? a : b; }
 static int min(int a, int b, int c) { return min(a, min(b, c)); }
 static float min(float a, float b) { return (a < b) ? a : b; }

@@ -1,10 +1,12 @@
 
 #include "../platform.h"
 #include "../engine.h"
+#include "window_handle.h"
 
 #include "../game_input.h" // TODO: Move this with other input
 
 #include "renderer.h"
+#include "input.h"
 
 
 
@@ -19,9 +21,6 @@ struct PlatformData
 {
   HINSTANCE app_instance;
   HWND window_handle;
-
-  bool key_states[256];      // TODO: This is temporary and should be moved to the input module
-  bool prev_key_states[256]; // TODO: This is temporary and should be moved to the input module
 
   LARGE_INTEGER previous_time;
 
@@ -56,77 +55,12 @@ float end_profile_timer()
   return (float)dt;
 }
 
-void read_input()
-{
-  memcpy(platform_data.prev_key_states, platform_data.key_states, sizeof(platform_data.key_states));
-}
-
-
-bool button_toggled_down(int player_id, ButtonInput type)
-{
-  int index = 0;
-
-  switch(type)
-  {
-    case INPUT_SWING: { index = ' '; break; }
-  }
-
-  return (platform_data.prev_key_states[index] == false && platform_data.key_states[index] == true) ? true : false;
-}
-
-bool button_state(int player_id, ButtonInput type)
-{
-  int index = 0;
-
-  switch(type)
-  {
-    case INPUT_SWING: { index = ' '; break; }
-  }
-
-  return platform_data.key_states[index];
-}
-
-bool button_toggled_up(int player_id, ButtonInput type)
-{
-  return false;
-}
 
 
 
-v2 analog_state(int player_id, AnalogInput type)
-{
-  v2 dir;
-
-  if(type == INPUT_MOVE)
-  {
-    dir.x += (platform_data.key_states['A']) ? -1.0f : 0.0f;
-    dir.x += (platform_data.key_states['D']) ?  1.0f : 0.0f;
-
-    dir.y += (platform_data.key_states['S']) ? -1.0f : 0.0f;
-    dir.y += (platform_data.key_states['W']) ?  1.0f : 0.0f;
-
-    return dir;
-  }
-
-  return dir;
-}
 
 
 
-v2 mouse_world_position()
-{
-  POINT window_client_pos;
-  BOOL success = GetCursorPos(&window_client_pos);
-  success = ScreenToClient(platform_data.window_handle, &window_client_pos);
-
-  return client_to_world(v2(window_client_pos.x, window_client_pos.y));
-}
-
-
-bool key_toggled_down(int key)
-{
-  return (platform_data.prev_key_states[key] == false && platform_data.key_states[key] == true) ? true : false;
-}
 
 
 
@@ -166,13 +100,13 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 
     case WM_KEYDOWN: 
     {
-      platform_data.key_states[wParam] = true;
+      record_key_event(wParam, true);
     }
     break;
 
     case WM_KEYUP:
     {
-      platform_data.key_states[wParam] = false;
+      record_key_event(wParam, false);
     }
     break;
 
@@ -278,8 +212,6 @@ void platform_events()
     TranslateMessage(&message);
     DispatchMessage(&message);
   }
-
-  if(platform_data.key_states[VK_ESCAPE]) stop_engine();
 }
 
 // Get dt in seconds
@@ -300,6 +232,8 @@ float get_dt()
   return (float)dt;
 }
 
+
+HWND get_window_handle() { return platform_data.window_handle; }
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {

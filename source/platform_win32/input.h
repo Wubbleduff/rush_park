@@ -1,5 +1,5 @@
 
 #pragma once
 
-void read_input();
+void record_key_event(int vk_code, bool state);
 

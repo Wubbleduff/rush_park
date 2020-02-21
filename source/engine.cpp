@@ -29,6 +29,7 @@ struct EngineData
 {
   bool engine_running = false;
   EngineMode mode;
+  unsigned tick_number = 0;
 
   float update_time_sum = 0.0f;
   int update_time_counter = 0;
@@ -77,15 +78,16 @@ void start_engine()
   // Initialization
   engine_data = (EngineData *)malloc(sizeof(EngineData));
   engine_data->mode = LOCAL_GAME;
+  engine_data->tick_number = 0;
   engine_data->update_time_sum = 0.0f;
-  engine_data->update_time_counter = 0.0f;
-  engine_data->update_counter = 0.0f;
+  engine_data->update_time_counter = 0;
+  engine_data->update_counter = 0;
 
 
-
-  init_platform();
 
   // Init game engine systems
+  init_platform();
+  init_input();
   init_component_collection();
   init_game_state_system();
   init_network_system();
@@ -136,6 +138,8 @@ void start_engine()
         start_frame();
         show_profiling();
 
+        read_input(engine_data->tick_number);
+
         // Check if the user wants to restart the game
         if(should_restart_game())
         {
@@ -152,28 +156,36 @@ void start_engine()
         // Render the game
         render();
 
-        read_input();
-
         float time_passed = end_profile_timer();
         engine_data->update_time_sum += time_passed;
         engine_data->update_time_counter++;
       }
       else if(engine_mode == CLIENT_GAME)
       {
+        // TEMP
+        {
+          static bool already_connected = false;
+          if(!already_connected)
+          {
+            //connect_to_server("127.0.0.1", 4242);            
+            already_connected = true;
+          }
+        }
+
         start_profile_timer();
         start_frame();
         show_profiling();
 
+        read_input(engine_data->tick_number);
+
         // Send this tick input data
-        // send_input_to_server();
+        send_input_to_server();
 
         // Recieve new state from the server
         // recieve_game_state();
 
         // Render the game
         render();
-
-        read_input();
 
         float time_passed = end_profile_timer();
         engine_data->update_time_sum += time_passed;
@@ -192,7 +204,7 @@ void start_engine()
 
       engine_counter -= TIME_STEP;
       engine_data->update_counter++;
-
+      engine_data->tick_number++;
     }
     engine_data->update_counter = 0;
 

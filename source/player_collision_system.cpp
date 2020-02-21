@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <stdlib.h>
+
 
 // For resolution
 struct CollisionInfo
@@ -43,6 +45,7 @@ static void draw_debug_players()
 
 
 // Pass models for resolution later
+static float min(float a, float b) { return (a < b) ? a : b; }
 static bool aabb_collision(const Rect *a, const Rect *b, Model *a_model, Model *b_model, CollisionInfo *info)
 {
   v2 a_pos = a->position;

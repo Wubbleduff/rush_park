@@ -62,7 +62,7 @@ struct ComponentPool : public BaseComponentPool
   T *add(const T *in_data)
   {
     // Make sure we have space
-    assert(count < capacity);
+    assert((int)count < capacity);
 
     T *slot = (T *)find_slot_in_pool(components, count);
     *slot = *in_data;

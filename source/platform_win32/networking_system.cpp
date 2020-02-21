@@ -2,6 +2,7 @@
 #include "../networking_system.h"
 
 #include "../game_state_system.h"
+#include "../game_input.h"
 
 #include <stdio.h>
 
@@ -168,6 +169,10 @@ private:
 
 struct NetworkData
 {
+  // Client data
+  StreamConnection server_connection; 
+
+  // Server data
   SOCKET listening_socket;
 
   static const int MAX_CLIENTS = 4;
@@ -269,11 +274,28 @@ static void send_stream_to_clients(void *stream, int bytes)
 
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Client
+////////////////////////////////////////////////////////////////////////////////
+void connect_to_server(const char *ip_string, int port)
+{
+  network_data->server_connection.connect_to_host(ip_string, port);
+}
+
+void send_input_to_server()
+{
+  TickInput current_tick_input = get_current_input(0);
+
+  network_data->server_connection.send_data(&current_tick_input, sizeof(TickInput));
+}
 
 
 
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Server
+////////////////////////////////////////////////////////////////////////////////
 void distribute_game_state()
 {
   // Serialize game state into a stream
@@ -313,13 +335,25 @@ void accept_client_connections()
   } while(error != CODE_WOULD_BLOCK);
 }
 
+
+
+
+
+
+
+
 void init_network_system()
 {
   init_winsock();
 
   network_data = (NetworkData *)malloc(sizeof(NetworkData));
-  network_data->num_client_connections = 0;
 
+  // Client
+  network_data->server_connection.create_socket();
+  network_data->server_connection.make_nonblocking();
+
+  // Server
+  network_data->num_client_connections = 0;
   make_listening_socket();
 }
 

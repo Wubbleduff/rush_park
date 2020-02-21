@@ -99,11 +99,15 @@ void update_player_controller_system(float time_step)
 
     if(i != 0) { ++player_it; ++i; continue; }
 
-    v2 move_dir = analog_state(0, INPUT_MOVE);
+    v2 move_dir = stick_state(0, INPUT_MOVE);
     if(!(move_dir.x == 0.0f && move_dir.y == 0.0f)) move_dir = unit(move_dir);
 
     v2 player_to_mouse = mouse_world_position() - player_model->position;
     if(length_squared(player_to_mouse) != 0.0f) player->hit_direction = unit(player_to_mouse);
+    /*
+    v2 aim_dir = stick_state(0, INPUT_AIM);
+    player->hit_direction = aim_dir;
+    */
 
 
     player->velocity += move_dir * player->move_power * time_step;
