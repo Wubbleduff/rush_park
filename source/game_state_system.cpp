@@ -332,7 +332,7 @@ void create_initial_entities()
     ball.add_component(C_BALL);
     Model *model = (Model *)ball.get_component(C_MODEL);
 
-    model->texture = "ball";
+    //model->texture = "ball";
 
     //Ball *ball = (Ball *)ball.get_component(C_BALL);
   }
@@ -406,6 +406,96 @@ static void serialize_entity(Entity *entity, void *stream, int *bytes_written)
   *bytes_written = sizeof(SerializedEntity);
 }
 
+static void deserialize_entity(const SerializedEntity *serialized_entity)
+{
+  Entity entity;
+
+  entity.id = serialized_entity->id;
+  entity.alive = serialized_entity->alive;
+  entity.will_die = serialized_entity->will_die;
+
+  Entity *target = &(game_state->entity_pool->entities[entity.id.id]);
+
+  // TODO: New entites and components created are "dealt with" here.
+  // Deal with destruction of entities and components
+
+  if(target->alive)
+  {
+    if(serialized_entity->active_components & (1 << C_MODEL))
+    {
+      Model *model = target->id.get_model();
+      if(!model) target->id.add_component(C_MODEL);
+      *model = serialized_entity->model;
+    }
+    if(serialized_entity->active_components & (1 << C_WALL))
+    {
+      Wall *wall = target->id.get_wall();
+      if(!wall) target->id.add_component(C_WALL);
+      *wall = serialized_entity->wall;
+    }
+    if(serialized_entity->active_components & (1 << C_BALL))
+    {
+      Ball *ball = target->id.get_ball();
+      if(!ball) target->id.add_component(C_BALL);
+      *ball = serialized_entity->ball;
+    }
+    if(serialized_entity->active_components & (1 << C_PLAYER))
+    {
+      Player *player = target->id.get_player();
+      if(!player) target->id.add_component(C_PLAYER);
+      *player = serialized_entity->player;
+    }
+    if(serialized_entity->active_components & (1 << C_GOAL))
+    {
+      Goal *goal = target->id.get_goal();
+      if(!goal) target->id.add_component(C_GOAL);
+      *goal = serialized_entity->goal;
+    }
+
+  }
+  else
+  {
+    
+    for(int i = 0; i < NUM_COMPONENTS; i++) entity.components[i] = nullptr;
+
+    if(serialized_entity->active_components & (1 << C_MODEL))
+    {
+      entity.id.add_component(C_MODEL);
+      Model *model = entity.id.get_model();
+      *model = serialized_entity->model;
+    }
+    if(serialized_entity->active_components & (1 << C_WALL))
+    {
+      entity.id.add_component(C_WALL);
+      Wall *wall = entity.id.get_wall();
+      *wall = serialized_entity->wall;
+    }
+    if(serialized_entity->active_components & (1 << C_BALL))
+    {
+      entity.id.add_component(C_BALL);
+      Ball *ball = entity.id.get_ball();
+      *ball = serialized_entity->ball;
+    }
+    if(serialized_entity->active_components & (1 << C_PLAYER))
+    {
+      entity.id.add_component(C_PLAYER);
+      Player *player = entity.id.get_player();
+      *player = serialized_entity->player;
+    }
+    if(serialized_entity->active_components & (1 << C_GOAL))
+    {
+      entity.id.add_component(C_GOAL);
+      Goal *goal = entity.id.get_goal();
+      *goal = serialized_entity->goal;
+    }
+
+    *target = entity;
+    game_state->entity_pool->num_entities++;
+  }
+
+
+}
+
 void serialize_game_state(void **out_stream, int *out_bytes)
 {
   int entities_left = game_state->entity_pool->num_entities;
@@ -416,7 +506,6 @@ void serialize_game_state(void **out_stream, int *out_bytes)
   int index = 0;
   while(entities_left > 0)
   {
-
     while(game_state->entity_pool->entities[index].alive == false) index++;
 
     Entity *entity = &(game_state->entity_pool->entities[index]);
@@ -431,6 +520,19 @@ void serialize_game_state(void **out_stream, int *out_bytes)
 
   *out_stream = start_of_stream;
   *out_bytes = bytes;
+}
+
+void deserialize_game_state(const void *data, int bytes)
+{
+  const char *current = (char *)data;
+  const char *end = (char *)data + bytes;
+  int i = 0;
+  while(current < end)
+  {
+    deserialize_entity((const SerializedEntity *)current);
+    current += sizeof(SerializedEntity);
+    i++;
+  }
 }
 
 void init_game_state_system()

@@ -26,7 +26,7 @@ struct Model : Component
 
   Color color = Color(1.0f, 1.0f, 1.0f, 1.0f);
 
-  const char *texture = nullptr;
+  //const char *texture = nullptr;
 
   //void destroy();
 };

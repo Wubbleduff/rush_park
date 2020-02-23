@@ -173,7 +173,7 @@ void init_platform()
   BOOL result = SetWindowLong(platform_data.window_handle, GWL_EXSTYLE, WS_EX_LAYERED) ;
   result = SetLayeredWindowAttributes(platform_data.window_handle, RGB(0, 0, 0), 10, LWA_COLORKEY);
 #else
-  unsigned width = 1920;
+  unsigned width = 1920 / 2;
   float ratio = 16.0f / 9.0f;
   unsigned monitor_width = width;
   unsigned monitor_height = (unsigned)((1.0f / ratio) * width);

@@ -62,6 +62,14 @@ static void show_profiling()
   sprintf(text_buffer, "%d max updates per frame", highest);
   ImGui::Text(text_buffer);
 
+  ImGui::Spacing();
+  ImGui::Spacing();
+  ImGui::Spacing();
+
+  if(engine_data->mode == LOCAL_GAME)  ImGui::Text("LOCAL game");
+  if(engine_data->mode == CLIENT_GAME) ImGui::Text("CLIENT game");
+  if(engine_data->mode == SERVER_GAME) ImGui::Text("SERVER game");
+
   ImGui::End();
 
 }
@@ -167,7 +175,7 @@ void start_engine()
           static bool already_connected = false;
           if(!already_connected)
           {
-            //connect_to_server("127.0.0.1", 4242);            
+            connect_to_server("127.0.0.1", 4242);            
             already_connected = true;
           }
         }
@@ -182,7 +190,7 @@ void start_engine()
         send_input_to_server();
 
         // Recieve new state from the server
-        // recieve_game_state();
+        recieve_game_state_from_server();
 
         // Render the game
         render();
@@ -193,12 +201,35 @@ void start_engine()
       }
       else if(engine_mode == SERVER_GAME)
       {
+        start_profile_timer();
+        start_frame();
+        show_profiling();
+
+        read_input(engine_data->tick_number);
+
+        // Check if the user wants to restart the game
+        if(should_restart_game())
+        {
+          reset_game_state();
+        }
+        if(key_toggled_down('R'))
+        {
+          set_game_to_restart();
+        }
+
         // Simulate the game systems
         simulate_game(TIME_STEP);
 
         // Distribute the game state to clients
         accept_client_connections();
         distribute_game_state();
+
+        // Render the game
+        render();
+
+        float time_passed = end_profile_timer();
+        engine_data->update_time_sum += time_passed;
+        engine_data->update_time_counter++;
       }
 
 

@@ -225,7 +225,7 @@ static void make_listening_socket()
   sockaddr_in bound_address;
   bound_address.sin_family = AF_INET;
   bound_address.sin_addr.s_addr = inet_addr("127.0.0.1");
-  bound_address.sin_port = htons(2000);
+  bound_address.sin_port = htons(4242);
 
   error = bind(listening_socket, (SOCKADDR *)(&bound_address), sizeof(bound_address));
   if(error == SOCKET_ERROR)
@@ -241,6 +241,41 @@ static void make_listening_socket()
   }
 
   network_data->listening_socket = listening_socket;
+}
+
+#include "../component.h"
+struct SerializedEntityXX
+{
+  EntityID id = EntityID(0);
+
+  bool alive = false;
+  bool will_die = false;
+
+  unsigned active_components = 0;
+
+  Model model;
+  Wall wall;
+  Ball ball;
+  Player player;
+  Goal goal;
+};
+static bool read_stream_from_server(void **out_stream, int *out_bytes)
+{
+  //int bytes = 4096;
+  int bytes = 13 * sizeof(SerializedEntityXX);
+  void *data = malloc(bytes); // TODO: For now
+  *out_stream = data;
+
+  int bytes_read;
+  bool recieved_new_data = network_data->server_connection.recieve_data((char *)data, bytes, &bytes_read);
+
+  if(recieved_new_data)
+  {
+    *out_bytes = bytes_read;
+    return true;
+  }
+  *out_bytes = 0;
+  return false;
 }
 
 static void send_stream_to_clients(void *stream, int bytes)
@@ -287,6 +322,26 @@ void send_input_to_server()
   TickInput current_tick_input = get_current_input(0);
 
   network_data->server_connection.send_data(&current_tick_input, sizeof(TickInput));
+}
+
+void recieve_game_state_from_server()
+{
+  bool recieved_new_data = false;
+
+  do
+  {
+    void *recieved_game_state = nullptr;
+    int recieved_bytes = 0;
+    recieved_new_data = read_stream_from_server(&recieved_game_state, &recieved_bytes);
+
+    if(recieved_new_data)
+    {
+      deserialize_game_state(recieved_game_state, recieved_bytes);
+    }
+
+    free(recieved_game_state);
+
+  } while(recieved_new_data);
 }
 
 

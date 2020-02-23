@@ -1209,12 +1209,16 @@ void render()
     Model &model = *it;
     Mesh *mesh = &renderer_data->quad_mesh;
 
+    Ball *ball = it->parent.get_ball();
+
     v3 position = v3(model.position, model.depth);
     v2 scale = model.scale;
     float rotation = model.rotation;
     v4 color = v4(model.color.r, model.color.g, model.color.b, model.color.a);
     Texture *texture = nullptr;
-    if(model.texture && strcmp(model.texture, "ball") == 0) texture = &(renderer_data->circle_texture);
+    //if(model.texture && strcmp(model.texture, "ball") == 0) texture = &(renderer_data->circle_texture);
+    //else texture = &(renderer_data->quad_texture);
+    if(ball != nullptr) texture = &(renderer_data->circle_texture);
     else texture = &(renderer_data->quad_texture);
 
     render_mesh(mesh, camera, shader, position, scale, rotation, color, texture, mesh->draw_mode);
