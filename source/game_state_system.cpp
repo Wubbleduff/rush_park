@@ -23,6 +23,12 @@ struct Entity
   Component *components[NUM_COMPONENTS];
 };
 
+struct SerializedEntityHeader
+{
+  int num_components;
+  unsigned active_components = 0;
+};
+
 struct SerializedEntity
 {
   EntityID id = EntityID(0);
@@ -58,6 +64,11 @@ struct GameState
 
   bool will_restart_game;
   bool simulate_game;
+};
+
+struct SerializedGameStateHeader
+{
+  int num_entities;
 };
 
 static GameState *game_state;
@@ -406,7 +417,7 @@ static void serialize_entity(Entity *entity, void *stream, int *bytes_written)
   *bytes_written = sizeof(SerializedEntity);
 }
 
-static void deserialize_entity(const SerializedEntity *serialized_entity)
+static int deserialize_entity(const SerializedEntity *serialized_entity)
 {
   Entity entity;
 
@@ -493,7 +504,7 @@ static void deserialize_entity(const SerializedEntity *serialized_entity)
     game_state->entity_pool->num_entities++;
   }
 
-
+  return sizeof(SerializedEntity);
 }
 
 void serialize_game_state(void **out_stream, int *out_bytes)
@@ -524,14 +535,30 @@ void serialize_game_state(void **out_stream, int *out_bytes)
 
 void deserialize_game_state(const void *data, int bytes)
 {
+  /*
   const char *current = (char *)data;
   const char *end = (char *)data + bytes;
-  int i = 0;
   while(current < end)
   {
     deserialize_entity((const SerializedEntity *)current);
     current += sizeof(SerializedEntity);
-    i++;
+  }
+  */
+
+  char *end = (char *)data + bytes;
+  char *stream_position = (char *)data;
+  //while(stream_position < end)
+  {
+    //SerializedGameStateHeader *game_state_header = (SerializedGameStateHeader *)stream_position;
+
+    //stream_position += sizeof(SerializedGameStateHeader);
+
+    //for(int i = 0; i < game_state_header->num_entities; i++)
+    {
+      //int entity_size = deserialize_entity((const SerializedEntityHeader *)stream_position);
+      int entity_size = deserialize_entity((const SerializedEntity *)stream_position);
+      stream_position += entity_size;
+    }
   }
 }
 

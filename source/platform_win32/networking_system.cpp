@@ -114,6 +114,13 @@ public:
     return static_cast<int>(bytes_queued); // Can safely cast because of passing in bytes as max bytes
   }
 
+  int bytes_available()
+  {
+    u_long result;
+    ioctlsocket(tcp_socket, FIONREAD, &result);
+    return result;
+  }
+
   bool recieve_data(char *buffer, int bytes, int *bytes_read)
   {
     // Listen for a response
@@ -171,6 +178,8 @@ struct NetworkData
 {
   // Client data
   StreamConnection server_connection; 
+  int client_recieve_buffer_size;
+  void *client_recieve_buffer;
 
   // Server data
   SOCKET listening_socket;
@@ -181,6 +190,7 @@ struct NetworkData
 };
 
 static NetworkData *network_data;
+static const int READ_CHUNK_SIZE = 4096;
 
 
 
@@ -243,51 +253,6 @@ static void make_listening_socket()
   network_data->listening_socket = listening_socket;
 }
 
-#include "../component.h"
-struct SerializedEntityXX
-{
-  EntityID id = EntityID(0);
-
-  bool alive = false;
-  bool will_die = false;
-
-  unsigned active_components = 0;
-
-  Model model;
-  Wall wall;
-  Ball ball;
-  Player player;
-  Goal goal;
-};
-static bool read_stream_from_server(void **out_stream, int *out_bytes)
-{
-  //int bytes = 4096;
-  int bytes = 13 * sizeof(SerializedEntityXX);
-  void *data = malloc(bytes); // TODO: For now
-  *out_stream = data;
-
-  int bytes_read;
-  bool recieved_new_data = network_data->server_connection.recieve_data((char *)data, bytes, &bytes_read);
-
-  if(recieved_new_data)
-  {
-    *out_bytes = bytes_read;
-    return true;
-  }
-  *out_bytes = 0;
-  return false;
-}
-
-static void send_stream_to_clients(void *stream, int bytes)
-{
-  for(int i = 0; i < network_data->num_client_connections; i++)
-  {
-    StreamConnection *client = &(network_data->client_connections[i]);
-    client->send_data(stream, bytes);
-  }
-}
-
-
 
 
 
@@ -326,22 +291,35 @@ void send_input_to_server()
 
 void recieve_game_state_from_server()
 {
+  int recieved_bytes_so_far = 0;
   bool recieved_new_data = false;
 
+  // Read in entire stream
   do
   {
-    void *recieved_game_state = nullptr;
-    int recieved_bytes = 0;
-    recieved_new_data = read_stream_from_server(&recieved_game_state, &recieved_bytes);
+    // Recieve the data
+    int recieved_bytes;
+    char *buffer_location = (char *)network_data->client_recieve_buffer + recieved_bytes_so_far;
+    recieved_new_data = network_data->server_connection.recieve_data(buffer_location, READ_CHUNK_SIZE, &recieved_bytes);
+    recieved_bytes_so_far += recieved_bytes;
 
-    if(recieved_new_data)
+    // Check if the buffer should resize to fit another chunk
+    if(recieved_bytes_so_far > network_data->client_recieve_buffer_size - READ_CHUNK_SIZE)
     {
-      deserialize_game_state(recieved_game_state, recieved_bytes);
+      // Resize buffer to next read
+      void *new_buffer = malloc(network_data->client_recieve_buffer_size + READ_CHUNK_SIZE);
+      memcpy(new_buffer, network_data->client_recieve_buffer, network_data->client_recieve_buffer_size);
+      free(network_data->client_recieve_buffer);
+      network_data->client_recieve_buffer = new_buffer;
+      network_data->client_recieve_buffer_size += READ_CHUNK_SIZE;
     }
 
-    free(recieved_game_state);
-
   } while(recieved_new_data);
+
+  if(recieved_bytes_so_far == SOCKET_ERROR) return;
+
+  // Deserialze game state
+  deserialize_game_state(network_data->client_recieve_buffer, recieved_bytes_so_far);
 }
 
 
@@ -359,7 +337,11 @@ void distribute_game_state()
   serialize_game_state(&stream, &bytes);
   
   // Send to client
-  send_stream_to_clients(stream, bytes);
+  for(int i = 0; i < network_data->num_client_connections; i++)
+  {
+    StreamConnection *client = &(network_data->client_connections[i]);
+    client->send_data(stream, bytes);
+  }
 
 
   free(stream);
@@ -404,6 +386,8 @@ void init_network_system()
   network_data = (NetworkData *)malloc(sizeof(NetworkData));
 
   // Client
+  network_data->client_recieve_buffer_size = READ_CHUNK_SIZE;
+  network_data->client_recieve_buffer = malloc(READ_CHUNK_SIZE);
   network_data->server_connection.create_socket();
   network_data->server_connection.make_nonblocking();
 
