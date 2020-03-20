@@ -211,6 +211,193 @@ ComponentIterator<Goal> get_goals_iterator()
 
 
 
+static int write_int(void **stream, int a)
+{
+  **(int **)stream = a;
+  *stream = (char *)(*stream) + sizeof(a);
+  return sizeof(a);
+}
+static int write_float(void **stream, float a)
+{
+  **(float **)stream = a;
+  *stream = (char *)(*stream) + sizeof(a);
+  return sizeof(a);
+}
+static int write_v2(void **stream, v2 a)
+{
+  **(v2 **)stream = a;
+  *stream = (char *)(*stream) + sizeof(a);
+  return sizeof(a);
+}
+static int write_color(void **stream, Color a)
+{
+  **(Color **)stream = a;
+  *stream = (char *)(*stream) + sizeof(a);
+  return sizeof(a);
+}
+static int read_int(void const **stream)
+{
+  int a = **(int **)stream;
+  *stream = (char *)(*stream) + sizeof(a);
+  return a;
+}
+static float read_float(void const **stream)
+{
+  float a = **(float **)stream;
+  *stream = (char *)(*stream) + sizeof(a);
+  return a;
+}
+static v2 read_v2(void const **stream)
+{
+  v2 a = **(v2 **)stream;
+  *stream = (char *)(*stream) + sizeof(a);
+  return a;
+}
+static Color read_color(void const **stream)
+{
+  Color a = **(Color **)stream;
+  *stream = (char *)(*stream) + sizeof(a);
+  return a;
+}
+
+
+int Model::serialize(void *stream)
+{
+  int bytes = 0;
+  bytes += write_v2(&stream, position);
+  bytes += write_float(&stream, depth);
+  bytes += write_v2(&stream, scale);
+  bytes += write_float(&stream, rotation);
+  bytes += write_color(&stream, color);
+  return bytes;
+}
+int Model::deserialize(const void *stream)
+{
+  position = read_v2(&stream);
+  depth = read_float(&stream);
+  scale = read_v2(&stream);
+  rotation = read_float(&stream);
+  color = read_color(&stream);
+  int bytes = sizeof(position) + sizeof(depth) + sizeof(scale) + sizeof(rotation) + sizeof(color);
+  return bytes;
+}
+
+int Wall::serialize(void *stream)
+{
+  int bytes = 0;
+  bytes += write_v2(&stream, scale);
+  return bytes;
+}
+int Wall::deserialize(const void *stream)
+{
+  scale = read_v2(&stream);
+  int bytes = sizeof(scale);
+  return bytes;
+}
+
+int Ball::serialize(void *stream)
+{
+  int bytes = 0;
+  bytes += write_float(&stream, drag);
+  bytes += write_v2(&stream, velocity);
+  bytes += write_float(&stream, hit_speed);
+  bytes += write_float(&stream, hit_speed_increment);
+  return bytes;
+}
+int Ball::deserialize(const void *stream)
+{
+  drag = read_float(&stream);
+  velocity = read_v2(&stream);
+  hit_speed = read_float(&stream);
+  hit_speed_increment = read_float(&stream);
+  int bytes = sizeof(drag) + sizeof(velocity) + sizeof(hit_speed) + sizeof(hit_speed_increment);
+  return bytes;
+}
+
+int Player::serialize(void *stream)
+{
+  int bytes = 0;
+
+  bytes += write_float(&stream, move_power);
+  bytes += write_v2(&stream, velocity);
+  bytes += write_float(&stream, drag);
+  bytes += write_float(&stream, mass);
+  bytes += write_float(&stream, hit_radius);
+  bytes += write_float(&stream, arc_length);
+  bytes += write_float(&stream, hit_power);
+  bytes += write_float(&stream, swing_time);
+  bytes += write_float(&stream, swing_timer);
+  bytes += write_v2(&stream, hit_direction);
+  //bytes += write_int(&stream, );
+  //bytes += write_int(&stream, );
+  //bytes += write_int(&stream, );
+  //bytes += write_int(&stream, );
+  //bytes += write_int(&stream, );
+
+
+  return bytes;
+}
+int Player::deserialize(const void *stream)
+{
+  move_power = read_float(&stream);
+  velocity = read_v2(&stream);
+  drag = read_float(&stream);
+  mass = read_float(&stream);
+  hit_radius = read_float(&stream);
+  arc_length = read_float(&stream);
+  hit_power = read_float(&stream);
+  swing_time = read_float(&stream);
+  swing_timer = read_float(&stream);
+  hit_direction = read_v2(&stream);
+  int bytes = sizeof(float) * 8 + sizeof(v2) * 2;
+  return bytes;
+}
+
+int Goal::serialize(void *stream)
+{
+  int bytes = 0;
+  bytes += write_int(&stream, team);
+  return bytes;
+}
+int Goal::deserialize(const void *stream)
+{
+  team = (Goal::Team)read_int(&stream);
+  int bytes = sizeof(int);
+  return bytes;
+}
+
+
+
+int serialize_component(Component *component, void *stream)
+{
+  return component->serialize(stream);
+}
+
+int deserialize_component(ComponentType type, EntityID parent, const void *stream)
+{
+  Component *target_component = nullptr;
+
+  // Check if the parent already has this component
+  if(parent.get_component(type) == nullptr)
+  {
+    parent.add_component(type);
+  }
+  target_component = parent.get_component(type);
+
+  switch(type)
+  {
+    case C_MODEL:  { return parent.get_model()->deserialize(stream); }
+    case C_WALL:   { return parent.get_wall()->deserialize(stream); }
+    case C_BALL:   { return parent.get_ball()->deserialize(stream); }
+    case C_PLAYER: { return parent.get_player()->deserialize(stream); }
+    case C_GOAL:   { return parent.get_goal()->deserialize(stream); }
+  }
+
+  return 0;
+}
+
+
+
 
 void init_component_collection()
 {

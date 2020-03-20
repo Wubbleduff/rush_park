@@ -18,21 +18,10 @@ enum AnalogInput
   NUM_ANALOG_INPUTS
 };
 
-struct TickInput
-{
-  unsigned tick_number;
-
-  int player_number;
-
-  unsigned char button_states[NUM_BUTTON_INPUTS / 8 + 1]; // 1 bit for each state
-  v2 stick_states[NUM_ANALOG_INPUTS];
-};
 
 
 
-void read_input(unsigned tick_number);
-
-TickInput get_current_input(int player_number);
+void read_input();
 
 bool button_toggled_down(int player_id, ButtonInput type);
 bool button_state(int player_id, ButtonInput type);
@@ -43,11 +32,16 @@ v2 stick_state(int player_id, AnalogInput type);
 
 
 v2 mouse_world_position();
+v2 mouse_ndc_position();
 
 
 
 // Debugging
 bool key_toggled_down(int button);
+bool key_state(int button);
+
+bool mouse_toggled_down(int button);
+bool mouse_state(int button);
 
 void init_input();
 

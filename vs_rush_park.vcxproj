@@ -65,12 +65,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>libs\DX\Include;libs\imgui;$(IncludePath)</IncludePath>
+    <IncludePath>libs\DX\Include;libs\imgui;libs\stb;$(IncludePath)</IncludePath>
     <LibraryPath>libs\DX\Lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>libs\imgui;libs\DX\Include;$(IncludePath)</IncludePath>
+    <IncludePath>libs\imgui;libs\DX\Include;libs\stb;$(IncludePath)</IncludePath>
     <LibraryPath>libs\DX\Lib\x86;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -115,6 +115,7 @@
     <ClCompile Include="source\component.cpp" />
     <ClCompile Include="source\engine.cpp" />
     <ClCompile Include="source\game_state_system.cpp" />
+    <ClCompile Include="source\main_menu.cpp" />
     <ClCompile Include="source\platform_win32\compiler_translation_unit.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

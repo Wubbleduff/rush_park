@@ -4,6 +4,8 @@
 #include "../game_state_system.h"
 #include "../game_input.h"
 
+#include "input.h"
+
 #include <stdio.h>
 
 #ifdef WIN32
@@ -67,9 +69,8 @@ public:
     other_address = *in_address;
   }
 
-  void make_nonblocking()
+  void make_nonblocking(unsigned long mode = 1)
   {
-    unsigned long mode = 1;
 #ifdef WIN32
     int error = ioctlsocket(tcp_socket, FIONBIO, &mode);
 #else
@@ -80,6 +81,8 @@ public:
 
   int connect_to_host(const char *address_string, int port)
   {
+    make_nonblocking(0);
+
     // Create address
     sockaddr_in address = {};
     address.sin_family = AF_INET;
@@ -101,6 +104,8 @@ public:
     }
 
     other_address = address;
+
+    make_nonblocking(1);
 
     return error;
   }
@@ -178,11 +183,15 @@ struct NetworkData
 {
   // Client data
   StreamConnection server_connection; 
+  // Buffer for reading server state into
   int client_recieve_buffer_size;
   void *client_recieve_buffer;
 
   // Server data
   SOCKET listening_socket;
+  // Buffer for reading client input into
+  int server_client_input_buffer_size;
+  void *server_client_input_buffer;
 
   static const int MAX_CLIENTS = 4;
   int num_client_connections = 0;
@@ -221,6 +230,9 @@ static void cleanup_winsock()
 
 static void make_listening_socket()
 {
+  // This might be a bad socket
+  closesocket(network_data->listening_socket);
+
   // Create a listening socket
   SOCKET listening_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(listening_socket == INVALID_SOCKET)
@@ -234,7 +246,7 @@ static void make_listening_socket()
 
   sockaddr_in bound_address;
   bound_address.sin_family = AF_INET;
-  bound_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+  bound_address.sin_addr.s_addr = INADDR_ANY;// inet_addr("127.0.0.1");
   bound_address.sin_port = htons(4242);
 
   error = bind(listening_socket, (SOCKADDR *)(&bound_address), sizeof(bound_address));
@@ -251,6 +263,14 @@ static void make_listening_socket()
   }
 
   network_data->listening_socket = listening_socket;
+}
+
+static void resize_buffer(void **buffer, int old_size, int add_size)
+{
+  void *new_buffer = malloc(old_size + add_size);
+  memcpy(new_buffer, *buffer, old_size);
+  free(*buffer);
+  *buffer = new_buffer;
 }
 
 
@@ -284,9 +304,13 @@ void connect_to_server(const char *ip_string, int port)
 
 void send_input_to_server()
 {
-  TickInput current_tick_input = get_current_input(0);
+  void *stream = nullptr;
+  int bytes = 0;
+  serialize_input(&stream, &bytes);
 
-  network_data->server_connection.send_data(&current_tick_input, sizeof(TickInput));
+  network_data->server_connection.send_data(stream, bytes);
+
+  free(stream);
 }
 
 void recieve_game_state_from_server()
@@ -307,10 +331,7 @@ void recieve_game_state_from_server()
     if(recieved_bytes_so_far > network_data->client_recieve_buffer_size - READ_CHUNK_SIZE)
     {
       // Resize buffer to next read
-      void *new_buffer = malloc(network_data->client_recieve_buffer_size + READ_CHUNK_SIZE);
-      memcpy(new_buffer, network_data->client_recieve_buffer, network_data->client_recieve_buffer_size);
-      free(network_data->client_recieve_buffer);
-      network_data->client_recieve_buffer = new_buffer;
+      resize_buffer(&network_data->client_recieve_buffer, network_data->client_recieve_buffer_size, READ_CHUNK_SIZE);
       network_data->client_recieve_buffer_size += READ_CHUNK_SIZE;
     }
 
@@ -329,7 +350,57 @@ void recieve_game_state_from_server()
 ////////////////////////////////////////////////////////////////////////////////
 // Server
 ////////////////////////////////////////////////////////////////////////////////
-void distribute_game_state()
+void read_input_from_clients()
+{
+  int recieved_bytes_so_far = 0;
+  bool recieved_new_data = false;
+
+  char *input_buffer = (char *)network_data->server_client_input_buffer;
+  int *buffer_size = &network_data->server_client_input_buffer_size;
+
+  // Read input from all clients
+
+  for(int i = 0; i < network_data->num_client_connections; i++)
+  {
+    StreamConnection *client = &(network_data->client_connections[i]);
+
+    // Read in stream
+    do
+    {
+      // Recieve the data
+      int recieved_bytes;
+      char *buffer_location = input_buffer + recieved_bytes_so_far;
+      recieved_new_data = client->recieve_data(buffer_location, READ_CHUNK_SIZE, &recieved_bytes);
+      if(recieved_new_data)
+      {
+        recieved_bytes_so_far += recieved_bytes;
+      }
+
+      if(recieved_new_data)
+      {
+        int b = 0;
+        b++;
+      }
+
+      // Check if the buffer should resize to fit another chunk
+      if(recieved_bytes_so_far > *buffer_size - READ_CHUNK_SIZE)
+      {
+        // Resize buffer to next read
+        resize_buffer(&network_data->server_client_input_buffer, *buffer_size, READ_CHUNK_SIZE);
+        input_buffer = (char *)network_data->server_client_input_buffer;
+        *buffer_size += READ_CHUNK_SIZE;
+      }
+
+    } while(recieved_new_data);
+
+    if(recieved_bytes_so_far == SOCKET_ERROR) return;
+  }
+
+  // Give input to input system
+  deserialize_input(input_buffer, recieved_bytes_so_far);
+}
+
+void distribute_game_state(unsigned tick_number)
 {
   // Serialize game state into a stream
   int bytes;
@@ -360,8 +431,12 @@ void accept_client_connections()
     if(incoming_socket == INVALID_SOCKET)
     {
       error = get_last_error();
-      if(error != CODE_WOULD_BLOCK) fprintf(stderr, "Error on accepting socket: %d\n", get_last_error());
-      continue;
+
+      // NOTE:
+      // This might fail if 2 servers are open on one port
+
+      //if(error != CODE_WOULD_BLOCK) fprintf(stderr, "Error on accepting socket: %d\n", get_last_error());
+      break;
     }
 
     // Valid socket
@@ -378,6 +453,11 @@ void accept_client_connections()
 
 
 
+void init_server()
+{
+  network_data->num_client_connections = 0;
+  make_listening_socket();
+}
 
 void init_network_system()
 {
@@ -392,8 +472,8 @@ void init_network_system()
   network_data->server_connection.make_nonblocking();
 
   // Server
-  network_data->num_client_connections = 0;
-  make_listening_socket();
+  network_data->server_client_input_buffer_size = READ_CHUNK_SIZE;
+  network_data->server_client_input_buffer = malloc(READ_CHUNK_SIZE);
 }
 
 void shutdown_network_client()

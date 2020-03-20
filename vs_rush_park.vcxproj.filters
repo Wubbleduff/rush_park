@@ -75,6 +75,9 @@
     <ClCompile Include="source\platform_win32\networking_system.cpp">
       <Filter>Source Files\platform_win32</Filter>
     </ClCompile>
+    <ClCompile Include="source\main_menu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="libs\dx\include\D3DX10math.inl">

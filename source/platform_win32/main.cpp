@@ -98,31 +98,11 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
     break;
     */
 
-    case WM_KEYDOWN: 
-    {
-      record_key_event(wParam, true);
-    }
-    break;
+    case WM_KEYDOWN: { record_key_event(wParam, true);  break; }
+    case WM_KEYUP:   { record_key_event(wParam, false); break; }
 
-    case WM_KEYUP:
-    {
-      record_key_event(wParam, false);
-    }
-    break;
-
-    /*
-    case WM_LBUTTONDOWN:
-    {
-      mouse_states[0] = true;
-    }
-    break;
-
-    case WM_LBUTTONUP:
-    {
-      mouse_states[0] = false;
-    }
-    break;
-    */
+    case WM_LBUTTONDOWN: { record_mouse_event(0, true);  break; }
+    case WM_LBUTTONUP:   { record_mouse_event(0, false); break; }
     
     default:
     {

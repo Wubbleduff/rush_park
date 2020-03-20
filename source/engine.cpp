@@ -1,12 +1,14 @@
 
 #include "engine.h"
 
+#include "my_math.h"
 #include "platform.h"
 #include "game_input.h"
 
 // Game engine systems
 #include "game_state_system.h"
 #include "rendering_system.h"
+#include "main_menu.h"
 #include "player_collision_system.h"
 #include "player_controller_system.h"
 #include "ball_collision_system.h"
@@ -16,14 +18,6 @@
 #include <stdio.h>  // sprintf
 #include <stdlib.h> // malloc
 
-enum EngineMode
-{
-  MENU,
-
-  LOCAL_GAME,
-  CLIENT_GAME,
-  SERVER_GAME,
-};
 
 struct EngineData
 {
@@ -85,7 +79,7 @@ void start_engine()
 {
   // Initialization
   engine_data = (EngineData *)malloc(sizeof(EngineData));
-  engine_data->mode = LOCAL_GAME;
+  engine_data->mode = MAIN_MENU;
   engine_data->tick_number = 0;
   engine_data->update_time_sum = 0.0f;
   engine_data->update_time_counter = 0;
@@ -99,8 +93,6 @@ void start_engine()
   init_component_collection();
   init_game_state_system();
   init_network_system();
-
-
 
   engine_data->engine_running = true;
 
@@ -128,16 +120,25 @@ void start_engine()
     while(engine_counter >= TIME_STEP && engine_data->update_counter <= MAX_UPDATES)
     {
 
-      if(key_toggled_down('1')) engine_data->mode = LOCAL_GAME;
-      if(key_toggled_down('2')) engine_data->mode = CLIENT_GAME;
-      if(key_toggled_down('3')) engine_data->mode = SERVER_GAME;
+      if(key_state(0x11)) // Control
+      {
+        if(key_toggled_down('1')) change_engine_mode(MAIN_MENU);
+        if(key_toggled_down('2')) change_engine_mode(LOCAL_GAME);
+        if(key_toggled_down('3')) change_engine_mode(CLIENT_GAME);
+        if(key_toggled_down('4')) change_engine_mode(SERVER_GAME);
+      }
 
       // Update engine systems given the mode
       EngineMode engine_mode = engine_data->mode;
-      if(engine_mode == MENU)
+      if(engine_mode == MAIN_MENU)
       {
         start_frame();
-        render();
+
+        read_input();
+
+        update_main_menu(TIME_STEP);
+
+        end_frame();
       }
       else if(engine_mode == LOCAL_GAME)
       {
@@ -146,7 +147,8 @@ void start_engine()
         start_frame();
         show_profiling();
 
-        read_input(engine_data->tick_number);
+        read_input();
+        
 
         // Check if the user wants to restart the game
         if(should_restart_game())
@@ -164,36 +166,50 @@ void start_engine()
         // Render the game
         render();
 
+        end_frame();
+
         float time_passed = end_profile_timer();
         engine_data->update_time_sum += time_passed;
         engine_data->update_time_counter++;
       }
       else if(engine_mode == CLIENT_GAME)
       {
+        start_profile_timer();
+        start_frame();
+        show_profiling();
+
+
         // TEMP
         {
           static bool already_connected = false;
           if(!already_connected)
           {
-            connect_to_server("127.0.0.1", 4242);            
-            already_connected = true;
+            //connect_to_server("127.0.0.1", 4242);            
+            static char buffer[32];
+            if(ImGui::InputText("IP", buffer, 31, ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+              connect_to_server(buffer, 4242);            
+            }
+            //already_connected = true;
           }
         }
 
-        start_profile_timer();
-        start_frame();
-        show_profiling();
 
-        read_input(engine_data->tick_number);
+        read_input();
 
         // Send this tick input data
-        send_input_to_server();
+        //if(ImGui::Button("Send input"))
+        {
+          send_input_to_server();
+        }
 
         // Recieve new state from the server
         recieve_game_state_from_server();
 
         // Render the game
         render();
+
+        end_frame();
 
         float time_passed = end_profile_timer();
         engine_data->update_time_sum += time_passed;
@@ -205,7 +221,9 @@ void start_engine()
         start_frame();
         show_profiling();
 
-        read_input(engine_data->tick_number);
+        read_input();
+
+        read_input_from_clients();
 
         // Check if the user wants to restart the game
         if(should_restart_game())
@@ -222,10 +240,13 @@ void start_engine()
 
         // Distribute the game state to clients
         accept_client_connections();
-        distribute_game_state();
+
+        distribute_game_state(engine_data->tick_number);
 
         // Render the game
         render();
+
+        end_frame();
 
         float time_passed = end_profile_timer();
         engine_data->update_time_sum += time_passed;
@@ -243,6 +264,16 @@ void start_engine()
 
   // Unintialization
   // close_window();
+}
+
+void change_engine_mode(EngineMode new_mode)
+{
+  engine_data->mode = new_mode;
+
+  if(new_mode == SERVER_GAME)
+  {
+    init_server();
+  }
 }
 
 void stop_engine()

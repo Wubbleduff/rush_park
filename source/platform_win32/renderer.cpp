@@ -24,7 +24,11 @@
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <vector>
+#include <map>
 
 #include <assert.h>
 
@@ -182,6 +186,8 @@ struct RendererData
   Texture quad_texture;
   Texture circle_texture;
 
+  std::map<std::string, Texture> loaded_textures;
+
   Camera camera = {};
 
   std::vector<DebugRect>   debug_rects_to_render;
@@ -304,6 +310,103 @@ static void create_shader(const char *vs_path, const char *vs_name, const char *
 
   output_shader->global_buffer = in_buffer;
 }
+
+
+
+
+
+
+
+
+
+
+
+Texture *get_texture(const char *texture_name)
+{
+  auto found_it = renderer_data->loaded_textures.find(texture_name);
+
+  if(found_it == renderer_data->loaded_textures.end())
+  {
+    renderer_data->loaded_textures[texture_name] = Texture();
+    Texture *result_texture = &(renderer_data->loaded_textures[texture_name]);
+
+    D3D11_SAMPLER_DESC sampler_desc;
+    sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    //sampler_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+    sampler_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    sampler_desc.MipLODBias = 0.0f;
+    sampler_desc.MaxAnisotropy = 1;
+    sampler_desc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+    sampler_desc.BorderColor[0] = 0;
+    sampler_desc.BorderColor[1] = 0;
+    sampler_desc.BorderColor[2] = 0;
+    sampler_desc.BorderColor[3] = 0;
+    sampler_desc.MinLOD = 0;
+    sampler_desc.MaxLOD = D3D11_FLOAT32_MAX;
+    // Create the texture sampler state.
+    HRESULT result = renderer_data->resources.device->CreateSamplerState(&sampler_desc, &result_texture->sample_state);
+    assert(!FAILED(result));
+
+
+    char path[256];
+    snprintf(path, sizeof(path), "assets/textures/%s.png", texture_name);
+
+    int width, height, channels;
+    unsigned char *texture_data = stbi_load(path, &width, &height, &channels, 4);
+    if(texture_data == NULL) return nullptr;
+
+    D3D11_TEXTURE2D_DESC texture_desc = {};
+    texture_desc.Width = width;
+    texture_desc.Height = height;
+    texture_desc.MipLevels = 1;
+    texture_desc.ArraySize = 1;
+    texture_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    texture_desc.SampleDesc.Count = 1;
+    texture_desc.Usage = D3D11_USAGE_DEFAULT;
+    texture_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    texture_desc.CPUAccessFlags = 0;
+    texture_desc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA data = { texture_data, texture_desc.Width * 4, 0};
+    ID3D11Texture2D *target_texture = nullptr;
+    result = renderer_data->resources.device->CreateTexture2D(&texture_desc, &data, &target_texture);
+    assert(!FAILED(result));
+
+    free(texture_data);
+
+    // Setup the description of the render target view.
+    D3D11_SHADER_RESOURCE_VIEW_DESC  view_desc = {};
+    view_desc.Format = texture_desc.Format;
+    view_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    view_desc.Texture2D.MostDetailedMip = 0;
+    view_desc.Texture2D.MipLevels = 1;
+
+    // Create the render target view.
+    ID3D11ShaderResourceView *target_view = nullptr;
+    result = renderer_data->resources.device->CreateShaderResourceView(target_texture, &view_desc, &target_view);
+    assert(!FAILED(result));
+
+    result_texture->resource = target_view;
+
+    return result_texture;
+  }
+  else
+  {
+    return &(found_it->second);
+  }
+
+}
+
+
+
+
+
+
+
+
+
 
 static mat4 make_ortho_projection_matrix(float width, float aspect_ratio, float near_plane, float far_plane)
 {
@@ -1181,8 +1284,76 @@ static void render_mesh(Mesh *mesh, Camera *camera, Shader *shader, v3 position,
   device_context->DrawIndexed(num_indices, 0, 0);
 }
 
+static void render_ndc_mesh(Mesh *mesh, Shader *shader, v3 position, v2 scale, float rotation, v4 color,
+                            Texture *texture, D3D_PRIMITIVE_TOPOLOGY topology, bool wireframe = false)
+{
+  ID3D11DeviceContext *device_context = renderer_data->resources.device_context;
+  ID3D11RasterizerState *raster_state = renderer_data->resources.raster_state;
+  ID3D11RasterizerState *wireframe_raster_state = renderer_data->resources.wireframe_raster_state;
+  Window *window = &renderer_data->window;
+
+
+  // Setting draw state
+  if(wireframe) raster_state = wireframe_raster_state;
+  device_context->RSSetState(raster_state);
+
+
+  // Vertex buffers
+  ID3D11Buffer *buffers[] = {mesh->vertex_buffer};
+  unsigned strides[] = {sizeof(Mesh::Vertex)};
+  unsigned offsets[] = {0};
+  unsigned num_buffers = sizeof(buffers) / sizeof(buffers[0]);
+  device_context->IASetVertexBuffers(0, num_buffers, buffers, strides, offsets);
+  device_context->IASetIndexBuffer(mesh->index_buffer, DXGI_FORMAT_R32_UINT, 0);
+  device_context->IASetPrimitiveTopology(topology);
+
+
+  // Shaders
+  device_context->IASetInputLayout(shader->layout);
+  device_context->VSSetShader(shader->vertex_shader, NULL, 0);
+  device_context->PSSetShader(shader->pixel_shader, NULL, 0);
+
+
+  // Global shader buffers
+  mat4 world_m_model = make_world_matrix(position, scale, rotation);
+
+  D3D11_MAPPED_SUBRESOURCE mapped_resource;
+  HRESULT result = device_context->Map(shader->global_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_resource);
+  assert(!FAILED(result));
+  FirstShaderBuffer *data = (FirstShaderBuffer *)mapped_resource.pData;
+  data->world_m_model = world_m_model;
+  data->view_m_world = mat4();
+  data->clip_m_view = mat4();
+  data->color = color;
+  device_context->Unmap(shader->global_buffer, 0);
+
+  device_context->VSSetConstantBuffers(0, 1, &shader->global_buffer);
+
+  // Textures
+  if(texture)
+  {
+    device_context->PSSetShaderResources(0, 1, &texture->resource);
+
+    device_context->PSSetSamplers(0, 1, &texture->sample_state);
+  }
+
+
+
+  // Render
+  unsigned num_indices = mesh->indices.size();
+  device_context->DrawIndexed(num_indices, 0, 0);
+}
+
 void start_frame()
 {
+  D3DResources *resources = &renderer_data->resources;
+  Window *window = &renderer_data->window;
+
+  // Clear the back and depth buffer.
+  resources->device_context->OMSetRenderTargets(1, &resources->render_target_view, resources->depth_stencil_view);
+  resources->device_context->ClearRenderTargetView(resources->render_target_view, renderer_data->window.background_color);
+  resources->device_context->ClearDepthStencilView(resources->depth_stencil_view, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
   imgui_startframe();
 }
 
@@ -1192,12 +1363,6 @@ void render()
 
   D3DResources *resources = &renderer_data->resources;
   Window *window = &renderer_data->window;
-
-  // Clear the back and depth buffer.
-  resources->device_context->OMSetRenderTargets(1, &resources->render_target_view, resources->depth_stencil_view);
-  resources->device_context->ClearRenderTargetView(resources->render_target_view, renderer_data->window.background_color);
-  resources->device_context->ClearDepthStencilView(resources->depth_stencil_view, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
 
 
   Camera *camera = &renderer_data->camera;
@@ -1287,9 +1452,14 @@ void render()
   renderer_data->debug_lines_to_render.clear();
 
 
+}
+
+void end_frame()
+{
   imgui_endframe();
 
   // Swap render buffers
+  D3DResources *resources = &renderer_data->resources;
   if(renderer_data->window.vsync) { resources->swap_chain->Present(1, 0); } // Lock to screen refresh rate.
   else { resources->swap_chain->Present(0, 0); } // Present as fast as possible.
 }
@@ -1381,6 +1551,22 @@ void shutdown_renderer()
 #endif
 }
 
+void draw_rect(v2 position, v2 scale, float rotation, const char *texture_name)
+{
+  set_depth_test(false);
+
+  Mesh *mesh = &renderer_data->quad_mesh;
+
+  v3 new_position = v3(position, 0.0f);
+  v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
+  Texture *texture = nullptr;
+  texture = get_texture(texture_name);
+
+  render_ndc_mesh(mesh, &(renderer_data->quad_shader), new_position, scale, rotation, color, texture, mesh->draw_mode);
+
+  set_depth_test(true);
+}
+
 
 void debug_draw_rect(v2 position, v2 scale, float rotation, Color color, DebugDrawMode draw_mode)
 {
@@ -1434,6 +1620,18 @@ v2 client_to_world(v2 window_client_pos)
   };
 
   return world_pos;
+}
+
+v2 client_to_ndc(v2 window_client_pos)
+{
+  window_client_pos.y = renderer_data->window.framebuffer_height - window_client_pos.y;
+  v2 ndc_pos =
+  {
+    (window_client_pos.x / renderer_data->window.framebuffer_width)  * 2.0f - 1.0f,
+    (window_client_pos.y / renderer_data->window.framebuffer_height) * 2.0f - 1.0f
+  };
+
+  return ndc_pos;
 }
 
 

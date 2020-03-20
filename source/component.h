@@ -14,6 +14,9 @@ struct Component
   EntityID parent;
 
   virtual void destroy() {};
+
+  virtual int serialize(void *stream) = 0;
+  virtual int deserialize(const void *stream) = 0;
 };
 
 
@@ -29,24 +32,31 @@ struct Model : Component
   //const char *texture = nullptr;
 
   //void destroy();
+  virtual int serialize(void *stream);
+  virtual int deserialize(const void *stream);
 };
 
 struct Wall : public Component
 {
   v2 scale;
+
   // void destroy();
+  virtual int serialize(void *stream);
+  virtual int deserialize(const void *stream);
 };
 
 struct Ball : public Component
 {
-  float drag = 0.25f;
+  float drag = 2.0f;
   v2 velocity = v2();
   float hit_speed = 3.0f;
-  float hit_speed_increment = 2.0f;
+  float hit_speed_increment = 10.0f;
 
 
 
   //void destroy();
+  virtual int serialize(void *stream);
+  virtual int deserialize(const void *stream);
 };
 
 
@@ -87,15 +97,20 @@ struct Player : public Component
   EntityID balls_hit_last_frame[MAX_BALLS_HIT] = {};
 
   //void destroy();
+  virtual int serialize(void *stream);
+  virtual int deserialize(const void *stream);
 };
 
 struct Goal : public Component
 {
-  enum
+  enum Team
   {
     GREEN,
     PINK
   } team;
+
+  virtual int serialize(void *stream);
+  virtual int deserialize(const void *stream);
 };
 
 template<typename T>
@@ -147,6 +162,8 @@ ComponentIterator<Ball> get_balls_iterator();
 ComponentIterator<Player> get_players_iterator();
 ComponentIterator<Goal> get_goals_iterator();
 
+int serialize_component(Component *component, void *stream);
+int deserialize_component(ComponentType type, EntityID parent, const void *stream);
 
 void init_component_collection();
 
